@@ -11,7 +11,7 @@ import pytest
 from homeassistant.config_entries import ConfigSubentryDataWithId
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.domestia.const import (
     CONF_ALWAYS_ON,
@@ -32,11 +32,6 @@ HALL = "hall_subentry"  # relay 3, non-dimmable
 
 # Raw controller state returned by mock_client: wardrobe full, garden half, hall off.
 STATE = {1: 64, 2: 32, 3: 0}
-
-
-@pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(enable_custom_integrations: None) -> None:
-    """Load the integration from custom_components/."""
 
 
 def light_subentry(

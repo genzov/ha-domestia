@@ -1,6 +1,6 @@
 # Migration plan: go-domestia bridge → native Home Assistant integration
 
-Goal: replace the Go MQTT bridge and add-on with a Python custom integration, `custom_components/domestia`, installed through HACS. It talks to the controller directly over TCP port 52001. Target: **Silver complete, Gold wherever feasible**, recorded in `quality_scale.yaml`.
+Goal: replace the Go MQTT bridge and add-on with a Python custom integration, `custom_components/domestia`, installed through HA's built-in **Marketplace** (HACS was merged into core in 2026.11 and reads the same `hacs.json`) or by copying the folder. It talks to the controller directly over TCP port 52001. Target: **Silver complete, Gold wherever feasible**, recorded in `quality_scale.yaml`.
 
 Custom integrations are unranked ("📦 Custom") on the official scale, so the tier is **self-assessed**. It is still checked rule by rule, using the same rule ids core uses.
 
@@ -12,8 +12,8 @@ Status: plan only. Nothing here has been run against the real controller. The Go
 
 | Fact | Verified how |
 |---|---|
-| The test harness is `pytest-homeassistant-custom-component==0.13.375`. It needs **Python ≥ 3.14** and pulls in **HA 2026.10.4**, `pytest-asyncio`, `pytest-cov`, `syrupy` and `pytest-freezer`. | Installed into a scratch venv with `uv venv -p 3.14`. The local default `python3` is 3.12 and is **too old**, so always use `uv`. |
-| Config subentries exist: `ConfigSubentryFlow`, `async_get_supported_subentry_types`, and `async_create_entry(..., subentries=[...])`. A duplicate subentry `unique_id` aborts with `already_configured`. | Read in `homeassistant/config_entries.py` (2026.10.4). |
+| **Target is HA 2026.11.1.** The test harness is HA core's official **`pytest-homeassistant==2026.11.1`**, which pins `homeassistant==2026.11.1` and needs **Python ≥ 3.14.2**. The community package `pytest-homeassistant-custom-component` is deprecated: its last release, 0.13.375, pins HA 2026.10.4 and fails to import with 2026.11. Import helpers from `pytest_homeassistant.common`. Custom integrations are enabled by default, so there is no `enable_custom_integrations` fixture. `addopts = "-p no:respx"` is required so that HA's httpx2 alias loads first. | PyPI, the upstream README, and the test suite run with HA 2026.11.1 under `uv`. The local `python3` is 3.12 and too old; uv provides 3.14. |
+| Config subentries exist: `ConfigSubentryFlow`, `async_get_supported_subentry_types`, and `async_create_entry(..., subentries=[...])`. A duplicate subentry `unique_id` aborts with `already_configured`. | Read in `homeassistant/config_entries.py` (2026.10.4; the suite passes on 2026.11.1). |
 | Custom integrations can ship brand images locally from a `brand/` folder (`Integration.has_branding`). | Read in `homeassistant/loader.py`. |
 | There is no core integration with domain `domestia`. | `ls homeassistant/components`. |
 | Adding or removing a subentry (`async_add_subentry`/`async_remove_subentry`) fires the entry's **update listeners**, and removing one clears its devices and entities from the registries. The flow helper `ConfigSubentryFlow.async_update_reload_and_abort` **raises `ValueError` if the entry has update listeners**, and `ConfigFlow.async_update_reload_and_abort` logs a warning in that case. `async_update_subentry(..., unique_id=...)` accepts a new unique_id and checks it for duplicates. | Read in `config_entries.py`. **Consequence:** we use exactly one reload mechanism, the update listener (§1.2). |
@@ -122,10 +122,10 @@ custom_components/domestia/
   brand/icon.png, brand/logo.png   copied from go_domestia/
 tests/
   __init__.py
-  conftest.py        auto enable_custom_integrations, mock_client fixture, mock_config_entry fixture (with 3 subentries: dimmable, non-dimmable, always_on)
+  conftest.py        mock_client fixture, mock_config_entry fixture (with 3 subentries: dimmable, non-dimmable, always_on)
   test_api.py  test_brightness.py  test_coordinator.py  test_config_flow.py  test_init.py  test_light.py  test_diagnostics.py
   snapshots/         syrupy
-hacs.json            {"name": "Domestia", "homeassistant": "2026.10.0", "render_readme": true}
+hacs.json            {"name": "Domestia", "homeassistant": "2026.11.0", "render_readme": true}
 pyproject.toml       uv-managed dev project (see below) + tool config: pytest (asyncio_mode=auto), coverage (fail_under=95), ruff, mypy strict
 uv.lock              committed; CI uses `uv sync --locked`
 .python-version      3.14
@@ -136,7 +136,7 @@ uv.lock              committed; CI uses `uv sync --locked`
 - `pyproject.toml` contains:
   - `requires-python = ">=3.14"`
   - `[tool.uv] package = false`, because HA loads the integration from `custom_components/`; it is not a wheel
-  - `[dependency-groups] dev = ["pytest-homeassistant-custom-component==0.13.375", "mypy", "ruff", "pre-commit"]`
+  - `[dependency-groups] dev = ["pytest-homeassistant==2026.11.1", "mypy", "ruff", "pre-commit"]`. Bump `pytest-homeassistant` with each HA release, since its version is the HA version.
 - Runtime dependencies stay in `manifest.json` `requirements`, which is empty.
 - Every command runs as `uv run …`. Setup is a single `uv sync`, and `uv` downloads Python 3.14 itself.
 - Dependency bumps are `uv lock --upgrade-package …`. Add a Renovate or Dependabot config with the `uv` ecosystem.
@@ -154,7 +154,6 @@ The signatures below summarize what is on the `ha-integration` branch. **Where t
 
 | Fixture | What it does |
 |---|---|
-| `auto_enable_custom_integrations` | autouse |
 | `mock_client` | an autospecced `DomestiaClient` patched in `__init__` and `config_flow`. `get_state` returns `STATE`. |
 | `mock_config_entry` | the entry from §4 Phase 0 |
 | `init_integration` | the entry, set up |
@@ -274,9 +273,9 @@ Run each WP as its own subagent with `isolation: "worktree"`. File ownership is 
 
 ### Phase 0 findings (binding for all WPs)
 
-Phase 0 is done on branch `ha-integration`. HA 2026.10 differs from older tutorials and from parts of this plan:
+Phase 0 is done on branch `ha-integration`. HA 2026.10/2026.11 differ from older tutorials and from parts of this plan:
 
-- **Python:** `requires-python = ">=3.14.2"`, because HA 2026.10.4 needs it.
+- **Python:** `requires-python = ">=3.14.2"`, because HA 2026.10 and later need it.
 - **Flow schemas use `probatio`, not voluptuous:** `import probatio`, then `probatio.Schema`, `probatio.Required`, `probatio.Optional`, `probatio.All`, `probatio.Range`, `probatio.Coerce` and `probatio.In`. `add_suggested_values_to_schema` is typed for `probatio.Schema`.
 - **`DeviceInfo(via_device=...)` is deprecated** (removed in 2027.8). Use `via_device_id=<device registry id>`. The controller device is therefore registered in `async_setup_entry` *before* the coordinator, and its id is passed to the coordinator (§3).
 - **`ColorMode` import:** under `mypy --strict`, import it from `homeassistant.components.light.const`, because the package doesn't re-export it explicitly.
@@ -419,7 +418,7 @@ This WP doesn't depend on the code, so it can start right after Phase 0.
 
 - **README:** a new "Home Assistant integration" section that covers every Bronze, Silver and Gold docs rule:
   - high-level description
-  - HACS installation (custom repository) and step-by-step setup
+  - installation through the Marketplace (custom repository) or a manual copy, plus step-by-step setup
   - setup fields (installation parameters)
   - options (configuration parameters)
   - lights import format
@@ -440,7 +439,7 @@ This WP doesn't depend on the code, so it can start right after Phase 0.
   - `pytest --cov=custom_components.domestia --cov-report=term-missing --cov-report=json --cov-fail-under=95`
   - a per-module check: a ~10-line Python step that reads `coverage.json` and fails if any file is below 95%, because `--cov-fail-under` only checks the total
   - `home-assistant/actions/hassfest@master`
-  - `hacs/action@main` (category `integration`)
+  - `hacs/action@main` (category `integration`), if it is still maintained now that HACS is part of core. Otherwise drop it; hassfest plus the `hacs.json` schema check is enough.
 
   Keep `ci.yml` (Go) untouched.
 - **AGENTS.md:** add the Python commands (`uv sync`, `uv run pytest`, `uv run ruff check`/`format`, `uv run mypy`, `uv run pre-commit install`) and the architecture of `custom_components/domestia`. Keep the Go sections until Phase 5.
@@ -494,8 +493,8 @@ The Go convention "no fakes, pure functions" still applies to `api.py` and `brig
 
 1. Note the current entity_ids, e.g. `light.garden`.
 2. Install the integration by **copying** `custom_components/domestia` to `/config/custom_components/`, then restart HA.
-   - This is the primary path for the trial. HACS installs from the latest GitHub release when one exists, and this repo's existing releases are add-on releases without `custom_components/`.
-   - HACS becomes the install path only after Phase 5 publishes an integration release.
+   - This is the primary path for the trial. The Marketplace, like HACS before it, installs from the latest GitHub release when one exists, and this repo's existing releases are add-on releases without `custom_components/`.
+   - The Marketplace becomes the install path only after Phase 5 publishes an integration release.
 3. Stop the **Domestia Bridge** add-on and disable "Start on boot". It publishes `offline`.
 4. Remove the MQTT entities so their entity_ids are freed:
    1. Clear the retained discovery configs:
@@ -584,7 +583,7 @@ This runs as one subagent.
    - `domestia.sample.json`
 
    Keep `domestia.json` local only; it is git-ignored and must never be committed.
-2. **Replace the release pipeline.** `release.yml` becomes: bump `manifest.json` `version` and add a `CHANGELOG.md` section, which creates a GitHub release that HACS picks up. Update the `/release` skill and the AGENTS.md "Releasing" and "Changing configuration options" sections to match.
+2. **Replace the release pipeline.** `release.yml` becomes: bump `manifest.json` `version` and add a `CHANGELOG.md` section, which creates a GitHub release that the Marketplace picks up. Update the `/release` skill and the AGENTS.md "Releasing" and "Changing configuration options" sections to match.
 3. **Rewrite README and AGENTS.md** for the integration only. Optionally rename the repo (e.g. `ha-domestia`); GitHub redirects old URLs.
 4. **Publish a final add-on release** whose changelog points users at the integration and the runbook.
 
