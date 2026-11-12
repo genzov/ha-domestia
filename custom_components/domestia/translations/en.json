@@ -1,0 +1,122 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to your Domestia controller",
+        "data": {
+          "host": "Host",
+          "model": "Model"
+        },
+        "data_description": {
+          "host": "IP address or hostname of the controller. It must be reachable on TCP port 52001.",
+          "model": "Controller model, shown on the devices. Optional."
+        }
+      },
+      "lights": {
+        "title": "Import lights",
+        "description": "Optionally paste the `lights` array from the Domestia Bridge add-on configuration. Leave it empty to add lights later.",
+        "data": {
+          "lights": "Lights (JSON)"
+        },
+        "data_description": {
+          "lights": "A JSON array such as `[{\"name\": \"Garden\", \"relay\": 2, \"dimmable\": true}]`."
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure your Domestia controller",
+        "data": {
+          "host": "Host",
+          "model": "Model"
+        },
+        "data_description": {
+          "host": "IP address or hostname of the controller. It must be reachable on TCP port 52001.",
+          "model": "Controller model, shown on the devices. Optional."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the controller.",
+      "invalid_lights_json": "The lights must be a JSON array of objects.",
+      "invalid_relay": "Every light needs a relay number between 1 and 255.",
+      "duplicate_relay": "Two lights use the same relay.",
+      "name_required": "Every light that is not always on needs a name."
+    },
+    "abort": {
+      "already_configured": "This controller is already configured.",
+      "reconfigure_successful": "The controller was reconfigured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "scan_interval": "Polling interval"
+        },
+        "data_description": {
+          "scan_interval": "Seconds between polls of the controller. At least 0.25."
+        }
+      }
+    }
+  },
+  "config_subentries": {
+    "light": {
+      "entry_type": "Light",
+      "initiate_flow": {
+        "user": "Add light"
+      },
+      "step": {
+        "user": {
+          "title": "Add a light",
+          "data": {
+            "name": "Name",
+            "relay": "Relay",
+            "dimmable": "Dimmable",
+            "always_on": "Always on"
+          },
+          "data_description": {
+            "name": "Name of the light. Required unless the light is always on.",
+            "relay": "Relay number on the controller, from 1 to 255.",
+            "dimmable": "Whether the relay can dim the light.",
+            "always_on": "Keep the relay on at full brightness and hide it from Home Assistant."
+          }
+        },
+        "reconfigure": {
+          "title": "Reconfigure light",
+          "data": {
+            "name": "Name",
+            "relay": "Relay",
+            "dimmable": "Dimmable",
+            "always_on": "Always on"
+          },
+          "data_description": {
+            "name": "Name of the light. Required unless the light is always on.",
+            "relay": "Relay number on the controller, from 1 to 255.",
+            "dimmable": "Whether the relay can dim the light.",
+            "always_on": "Keep the relay on at full brightness and hide it from Home Assistant."
+          }
+        }
+      },
+      "error": {
+        "name_required": "A light that is not always on needs a name."
+      },
+      "abort": {
+        "already_configured": "This relay already has a light.",
+        "reconfigure_successful": "The light was reconfigured."
+      }
+    }
+  },
+  "exceptions": {
+    "cannot_connect": {
+      "message": "Cannot reach the Domestia controller: {error}"
+    },
+    "command_failed": {
+      "message": "Failed to control {name}: {error}"
+    }
+  },
+  "issues": {
+    "relay_not_reported": {
+      "title": "Configured relays missing on the controller",
+      "description": "The controller at {host} did not report relays {relays}. It probably has fewer relays than configured. Fix or remove these lights in the Domestia integration."
+    }
+  }
+}

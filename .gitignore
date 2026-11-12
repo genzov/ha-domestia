@@ -44,3 +44,11 @@ CLAUDE.local.md
 # Local runtime configuration — contains real IPs and MQTT credentials.
 # Use domestia.sample.json as a template.
 domestia.json
+
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage

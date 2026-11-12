@@ -1,0 +1,12 @@
+{
+  "domain": "domestia",
+  "name": "Domestia",
+  "codeowners": ["@genzov"],
+  "config_flow": true,
+  "documentation": "https://github.com/genzov/go-domestia",
+  "integration_type": "hub",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/genzov/go-domestia/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}
