@@ -28,7 +28,7 @@ Status: plan only. Nothing here has been run against the real controller. The Go
 | Go bridge | Integration |
 |---|---|
 | `domestia/client.go` | `api.py`: a pure asyncio client with **no HA imports**, so it could later be extracted to PyPI |
-| `domestia/light.go` `NewLight` | `api.normalize_brightness(raw, dimmable)` |
+| `domestia/light.go` `NewLight` | `api.normalize_brightness(raw, *, dimmable)` |
 | `bridge/light_state.go` | `brightness.py`: pure conversion functions |
 | run loop, ticker, `updateChannel` | `DataUpdateCoordinator` plus `async_request_refresh()` after commands. The debouncer has `cooldown=0.3, immediate=True`, which reproduces the "refreshes coalesce" behaviour. |
 | 3-strikes `controllerFailures` | The coordinator returns the last good data for failures 1 and 2 and raises `UpdateFailed` on the 3rd. **This must be explicit**, because a stock coordinator goes unavailable on the first failure. |
@@ -64,7 +64,7 @@ The registry scopes `unique_id`s per integration, and device identifiers are `(d
 | Thing | Identifier |
 |---|---|
 | Controller device | `(DOMAIN, entry.entry_id)`. Name "Domestia controller", manufacturer "Domestia", model = `CONF_MODEL`. |
-| Light device | `(DOMAIN, subentry_id)`. Name = subentry title, `via_device` = controller, same manufacturer and model. |
+| Light device | `(DOMAIN, subentry_id)`. Name = subentry title, `via_device_id` = the controller device's registry id, same manufacturer and model. |
 | Light entity | `unique_id = subentry_id`, `has_entity_name = True`, `name = None` (the entity is its device's main feature). |
 
 Identity is keyed on **`subentry_id`, not the relay**. Rewiring a light to another relay through subentry reconfigure therefore keeps its entity, device and history. Keying on the relay would orphan the old registry entries.
@@ -148,6 +148,24 @@ uv.lock              committed; CI uses `uv sync --locked`
 
 ## 3. Frozen contracts (written in Phase 0, then read-only for streams)
 
+The signatures below summarize what is on the `ha-integration` branch. **Where they differ, the branch code wins.**
+
+`tests/conftest.py` provides these fixtures:
+
+| Fixture | What it does |
+|---|---|
+| `auto_enable_custom_integrations` | autouse |
+| `mock_client` | an autospecced `DomestiaClient` patched in `__init__` and `config_flow`. `get_state` returns `STATE`. |
+| `mock_config_entry` | the entry from §4 Phase 0 |
+| `init_integration` | the entry, set up |
+
+It also exports these constants and helpers:
+- `HOST`, `ENTRY_ID`, and `STATE = {1: 64, 2: 32, 3: 0}`
+- the subentry ids `WARDROBE` (relay 1, always_on), `GARDEN` (relay 2, dimmable) and `HALL` (relay 3, non-dimmable)
+- `light_subentry(subentry_id, name, relay, *, dimmable=False, always_on=False)`
+
+Import them with `from .conftest import ...`.
+
 ```python
 # api.py
 CONTROLLER_PORT = 52001
@@ -171,7 +189,7 @@ def pack_command(cmd: bytes) -> bytes: ...
 def parse_state(
     response: bytes,
 ) -> dict[int, int]: ...  # relay (1-based) -> raw byte, all relays in reply
-def normalize_brightness(raw: int, dimmable: bool) -> int: ...
+def normalize_brightness(raw: int, *, dimmable: bool) -> int: ...
 async def read_response(
     reader: asyncio.StreamReader,
     min_length: int,
@@ -195,9 +213,7 @@ class DomestiaClient:
 # brightness.py
 def to_ha(raw: int) -> int: ...
 def to_domestia(ha: int) -> int: ...
-def describe_state(
-    raw: int, dimmable: bool
-) -> str: ...  # "off" | "on" | "on at 75% (brightness 48/64)"
+def describe_state(raw: int, *, dimmable: bool) -> str: ...  # "off" | "on" | "on at 75% (brightness 48/64)"
 
 
 # coordinator.py
@@ -232,7 +248,7 @@ type DomestiaConfigEntry = ConfigEntry[DomestiaCoordinator]
 # config_flow.py
 def parse_lights_json(
     text: str,
-) -> list[ConfigSubentryData]: ...  # raises InvalidLights(translation_key)
+) -> list[ConfigSubentryData]: ...  # raises InvalidLightsError(translation_key)
 ```
 
 Translation keys frozen in Phase 0:
@@ -292,7 +308,15 @@ Phase 0 is done on branch `ha-integration`. HA 2026.10 differs from older tutori
    uv run pytest -q
    ```
 5. Commit the skeleton on branch `ha-integration`. All WPs branch from it.
-6. After this commit, **`tests/conftest.py` and `const.py` are read-only**. WP-specific fixtures live in that WP's own test files. A WP that needs a shared change asks the lead.
+6. After this commit these files are **read-only**:
+   - `tests/conftest.py`
+   - `const.py`
+   - `pyproject.toml`
+   - `uv.lock`
+   - `manifest.json`
+   - every section of `translations/en.json` except WP-C's `config`, `options` and `config_subentries` sections
+
+    WP-specific fixtures live in that WP's own test files. A WP that needs a shared change asks the lead.
 
 ### WP-A: protocol client (`api.py`, `tests/test_api.py`)
 
@@ -382,7 +406,7 @@ Spec: `bridge/bridge.go` (`executeCommand`), `config/light.go`, `config/light_te
 - **Tests:**
   - setup, unload and not-ready
   - entities created with the correct entity_ids, and none for always_on
-  - device registry fields (manufacturer, model, via_device, and model `None` when unset)
+  - device registry fields (manufacturer, model, via_device_id, and model `None` when unset)
   - turn_on/turn_off/brightness call sequences: brightness 1 → `set_brightness(…, 1)`, brightness 255 → 64, non-dimmable → `set_max_brightness`
   - command error raises `HomeAssistantError` with the translation key
   - refresh after a command
@@ -457,7 +481,7 @@ The subagent walks every rule in §7 against the code and tests and fixes `quali
 | `config.TestLoadConfigurationModel` | `test_config_flow.py::test_user_model` (valid model stored, omitted → `None`) | Invalid values are now rejected by the selector schema, so the test asserts that the schema rejects them. |
 | `config.TestLoadConfigurationRefreshFrequency` | `test_config_flow.py::test_options_scan_interval` (default, 0.25 ok, 0.24/0/−1 rejected) | Unit changes from ms to s. |
 | `config.TestLoadConfigurationLights` | `test_config_flow.py::test_parse_lights_json` (parametrized) + subentry duplicate/name tests | Ported: valid, relay 0, relay missing, duplicate relay, empty name, null light, always-on names may repeat. **Dropped:** `+`, `#`, `/` and entity-id collision, because names are no longer MQTT topics and HA de-duplicates entity_ids itself. |
-| `config.TestHomeAssistantRegistrationJSONRegistersDevice` | `test_light.py::test_device_info` | Asserts the registry device: name, manufacturer, model, identifiers, via_device. |
+| `config.TestHomeAssistantRegistrationJSONRegistersDevice` | `test_light.py::test_device_info` | Asserts the registry device: name, manufacturer, model, identifiers, via_device_id. |
 | `config.TestHomeAssistantRegistrationJSONOmitsEmptyModelAndVersion` | `test_light.py::test_device_info_without_model` | `sw_version` is dropped: it was the bridge version, and the controller reports no firmware. |
 
 The new tests have no Go equivalent: 3-strike availability, policy enforcement, the repair issue, the flows, setup/unload, diagnostics, end-to-end TCP framing, and lock serialization.

@@ -19,7 +19,7 @@
           "lights": "Lights (JSON)"
         },
         "data_description": {
-          "lights": "A JSON array such as `[{\"name\": \"Garden\", \"relay\": 2, \"dimmable\": true}]`."
+          "lights": "A JSON array of objects with `name`, `relay` and the optional `dimmable` and `always_on`, exactly as in the add-on configuration."
         }
       },
       "reconfigure": {
