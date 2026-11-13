@@ -7,6 +7,8 @@
   without MQTT or an add-on, and keeps your entity ids and history. Follow
   [Migrating from the add-on](https://github.com/genzov/go-domestia#migrating-from-the-add-on)
   to switch. The add-on keeps working, but gets no further updates.
+- Updated Go to fix known security vulnerabilities in the Go standard
+  library.
 
 ## 1.4.0
 
