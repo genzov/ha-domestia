@@ -5,7 +5,6 @@ lights. Lights are config subentries, one per relay. Reconfigure steps update
 the entry or subentry and abort; the entry's update listener reloads it.
 """
 
-import json
 from typing import Any, override
 
 import probatio
@@ -20,6 +19,7 @@ from homeassistant.config_entries import (
 )
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_SCAN_INTERVAL, UnitOfTime
 from homeassistant.core import callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.selector import (
     BooleanSelector,
     NumberSelector,
@@ -31,6 +31,7 @@ from homeassistant.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
 )
+from homeassistant.util.yaml import parse_yaml
 
 from .api import DomestiaClient, DomestiaError
 from .const import (
@@ -132,10 +133,14 @@ def _parse_light(light: Any) -> ConfigSubentryData:
 
 
 def parse_lights_json(text: str) -> list[ConfigSubentryData]:
-    """Parse the add-on's lights array into light subentries."""
+    """Parse the add-on's lights list into light subentries.
+
+    The add-on's Configuration tab shows the list as YAML. YAML is a superset of
+    JSON, so both that YAML and a JSON array are accepted.
+    """
     try:
-        lights = json.loads(text)
-    except ValueError as err:
+        lights = parse_yaml(text)
+    except HomeAssistantError as err:
         raise InvalidLightsError("invalid_lights_json") from err
     if not isinstance(lights, list):
         raise InvalidLightsError("invalid_lights_json")

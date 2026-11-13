@@ -81,17 +81,23 @@ it through Home Assistant's built-in Marketplace (HACS was merged into core in
    The integration connects to the controller before it continues. If it can't,
    the form shows "Failed to connect to the controller." and you can correct the
    host and try again. Each controller can be added only once.
-3. On **Import lights**, you can paste a JSON array of lights into
-   **Lights (JSON)**, or leave it empty and add lights one by one later. This is
-   the same `lights` array as in the Domestia Bridge add-on configuration:
+3. On **Import lights**, you can paste your lights into **Lights**, or leave it
+   empty and add lights one by one later. This is the `lights` list from the
+   Domestia Bridge add-on's **Configuration** tab, copied in YAML mode:
 
-   ```json
-   [
-     { "name": "Garden", "relay": 2, "dimmable": false },
-     { "name": "Living room", "relay": 13, "dimmable": true },
-     { "name": "Wardrobe", "relay": 1, "always_on": true }
-   ]
+   ```yaml
+   - name: Garden
+     relay: 2
+   - name: Living room
+     relay: 13
+     dimmable: true
+   - name: Wardrobe
+     relay: 1
+     always_on: true
    ```
+
+   A JSON array works too, e.g. `[{"name": "Garden", "relay": 2}]`. In YAML,
+   quote names that YAML reads as something else, such as `"On"` or `"Yes"`.
 
    | Key         | Required                   | Description                                                            |
    | ----------- | -------------------------- | ---------------------------------------------------------------------- |
@@ -100,8 +106,8 @@ it through Home Assistant's built-in Marketplace (HACS was merged into core in
    | `dimmable`  | no, defaults to `false`    | Whether the relay can dim the light.                                   |
    | `always_on` | no, defaults to `false`    | Keep the relay on at full brightness and hide it from Home Assistant.  |
 
-   Invalid input is reported on the form: "The lights must be a JSON array of
-   objects.", "Every light needs a relay number between 1 and 255.", "Two lights
+   Invalid input is reported on the form: "The lights must be a list of lights
+   in YAML or JSON.", "Every light needs a relay number between 1 and 255.", "Two lights
    use the same relay." or "Every light that is not always on needs a name."
 4. Submit. Each light becomes a light entry under the controller, with its own
    device and entity. The entity id is `light.<name>`, lowercased with spaces
@@ -267,8 +273,8 @@ both, because the controller handles one client at a time. History carries
 over when the new entities get the same entity ids as the old ones.
 
 1. Note the entity ids of your Domestia lights, e.g. `light.garden`, and copy
-   the `lights` array from the add-on's **Configuration** tab (in YAML mode).
-   The import step needs it in JSON, as in the example under [Setup](#setup).
+   the `lights` list from the add-on's **Configuration** tab (in YAML mode).
+   The import step accepts it as is; see [Setup](#setup).
 2. Install the integration with the **manual installation** above and restart
    Home Assistant. Don't add it yet.
 3. Stop the **Domestia Bridge** add-on and turn off **Start on boot**. Its

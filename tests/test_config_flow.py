@@ -251,6 +251,19 @@ async def test_lights_invalid_then_recover(
             [light("Porch", 255, dimmable=True)],
         ),
         ("[]", []),
+        (
+            # As copied from the add-on's Configuration tab in YAML mode
+            (
+                "- name: Garden\n  relay: 2\n  dimmable: true\n"
+                "- name: Hall\n  relay: 3\n"
+                "- name: Wardrobe\n  relay: 1\n  always_on: true\n"
+            ),
+            [
+                light("Garden", 2, dimmable=True),
+                light("Hall", 3),
+                light("Wardrobe", 1, always_on=True),
+            ],
+        ),
     ],
     ids=[
         "valid",
@@ -258,6 +271,7 @@ async def test_lights_invalid_then_recover(
         "always-on without name",
         "max relay, dimmable",
         "empty",
+        "add-on YAML",
     ],
 )
 def test_parse_lights_json(text: str, expected: list[ConfigSubentryData]) -> None:

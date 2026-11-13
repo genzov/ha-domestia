@@ -14,12 +14,12 @@
       },
       "lights": {
         "title": "Import lights",
-        "description": "Optionally paste the `lights` array from the Domestia Bridge add-on configuration. Leave it empty to add lights later.",
+        "description": "Optionally paste the `lights` list from the Domestia Bridge add-on configuration. Leave it empty to add lights later.",
         "data": {
-          "lights": "Lights (JSON)"
+          "lights": "Lights"
         },
         "data_description": {
-          "lights": "A JSON array of objects with `name`, `relay` and the optional `dimmable` and `always_on`, exactly as in the add-on configuration."
+          "lights": "The `lights` list as YAML, copied from the add-on's Configuration tab in YAML mode, or as a JSON array. Each light has `name`, `relay` and the optional `dimmable` and `always_on`."
         }
       },
       "reconfigure": {
@@ -36,7 +36,7 @@
     },
     "error": {
       "cannot_connect": "Failed to connect to the controller.",
-      "invalid_lights_json": "The lights must be a JSON array of objects.",
+      "invalid_lights_json": "The lights must be a list of lights in YAML or JSON.",
       "invalid_relay": "Every light needs a relay number between 1 and 255.",
       "duplicate_relay": "Two lights use the same relay.",
       "name_required": "Every light that is not always on needs a name."
