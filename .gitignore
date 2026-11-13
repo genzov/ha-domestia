@@ -236,6 +236,3 @@ coverage.json
 
 # General
 .DS_Store
-
-# Old local configuration with real IPs and credentials; never commit it.
-domestia.json

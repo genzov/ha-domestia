@@ -2,7 +2,7 @@
 
 This repository holds **Domestia**, a Home Assistant custom integration (`custom_components/domestia`, Python) that connects a Domestia lighting controller (binary protocol over TCP port 52001) directly to Home Assistant. It targets HA 2026.11.1 and is installed through HA's built-in Marketplace (formerly HACS) or by copying the folder.
 
-`domestia.json` is git-ignored and holds real controller IPs and credentials. Never read or commit it. Use only `192.168.1.x` sample addresses in docs and tests.
+Use only `192.168.1.x` sample addresses in docs and tests.
 
 ## Home Assistant integration
 
