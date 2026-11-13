@@ -12,6 +12,8 @@ dependencies = []
 dev = [
     "mypy",
     "pre-commit",
+    # Not bundled with pytest-homeassistant.
+    "pytest-cov>=7.1.0",
     # Home Assistant's official test package. Its version is the Home Assistant
     # release it pins; upgrade the two together.
     "pytest-homeassistant==2026.11.1",
