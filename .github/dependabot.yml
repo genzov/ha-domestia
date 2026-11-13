@@ -1,0 +1,13 @@
+version: 2
+updates:
+  # Python dev dependencies in pyproject.toml and uv.lock. Bump
+  # pytest-homeassistant together with the Home Assistant release it pins.
+  - package-ecosystem: uv
+    directory: "/"
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly

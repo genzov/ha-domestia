@@ -1,0 +1,129 @@
+rules:
+  # Bronze
+  action-setup:
+    status: exempt
+    comment: This integration does not provide custom actions.
+  appropriate-polling:
+    status: done
+    comment: |
+      The controller has no push updates. It is polled every 2 seconds by
+      default, and the interval can be changed in the options.
+  brands:
+    status: done
+    comment: Shipped locally in the brand/ folder.
+  common-modules:
+    status: done
+    comment: The coordinator is in coordinator.py and the base entity in entity.py.
+  config-flow-test-coverage: done
+  config-flow: done
+  dependency-transparency:
+    status: exempt
+    comment: |
+      There are no external requirements. The protocol client lives in api.py
+      without Home Assistant imports, so it can be extracted to a PyPI library
+      if the integration ever moves to core.
+  docs-actions:
+    status: exempt
+    comment: This integration does not provide custom actions.
+  docs-conditions:
+    status: exempt
+    comment: This integration does not provide any conditions.
+  docs-high-level-description: done
+  docs-installation-instructions: done
+  docs-removal-instructions: done
+  docs-triggers:
+    status: exempt
+    comment: This integration does not provide any triggers.
+  entity-event-setup:
+    status: done
+    comment: Entities are CoordinatorEntity subclasses.
+  entity-unique-id: done
+  has-entity-name: done
+  runtime-data: done
+  test-before-configure: done
+  test-before-setup: done
+  unique-config-entry: done
+
+  # Silver
+  action-exceptions:
+    status: done
+    comment: Failed commands raise HomeAssistantError with a translation key.
+  config-entry-unloading: done
+  docs-configuration-parameters: done
+  docs-installation-parameters: done
+  entity-unavailable:
+    status: done
+    comment: Entities go unavailable after 3 consecutive failed polls.
+  integration-owner: done
+  log-when-unavailable:
+    status: done
+    comment: The coordinator logs once when it becomes unavailable and once when it recovers.
+  parallel-updates: done
+  reauthentication-flow:
+    status: exempt
+    comment: The controller has no authentication.
+  test-coverage:
+    status: done
+    comment: At least 95% per module, enforced in CI.
+
+  # Gold
+  devices: done
+  diagnostics: done
+  discovery:
+    status: todo
+    comment: |
+      Verify on hardware. If the controller's MAC OUI and DHCP hostname are
+      stable, add a dhcp matcher with async_step_dhcp. Otherwise mark exempt.
+  discovery-update-info:
+    status: todo
+    comment: |
+      Depends on discovery. A dhcp step that updates the host of an existing
+      entry would cover it.
+  docs-data-update: done
+  docs-examples: done
+  docs-known-limitations: done
+  docs-supported-devices: done
+  docs-supported-functions: done
+  docs-troubleshooting: done
+  docs-use-cases: done
+  dynamic-devices:
+    status: exempt
+    comment: |
+      The controller does not report which relays exist. Devices come only from
+      light subentries the user adds, which apply on reload.
+  entity-category:
+    status: exempt
+    comment: The integration only creates primary light entities.
+  entity-device-class:
+    status: exempt
+    comment: Lights have no device class.
+  entity-disabled-by-default:
+    status: exempt
+    comment: The integration only creates primary light entities.
+  entity-translations:
+    status: exempt
+    comment: Each light entity takes its device's name (name = None).
+  exception-translations: done
+  icon-translations:
+    status: exempt
+    comment: The lights use the default light icons.
+  reconfiguration-flow: done
+  repair-issues:
+    status: done
+    comment: relay_not_reported is raised when configured relays are missing from the controller's reply.
+  stale-devices:
+    status: done
+    comment: |
+      Removing a light subentry removes its device, and
+      async_remove_config_entry_device allows deleting devices whose subentry is gone.
+
+  # Platinum
+  async-dependency:
+    status: done
+    comment: The protocol client is pure asyncio.
+  inject-websession:
+    status: exempt
+    comment: The controller speaks raw TCP, not HTTP.
+  strict-typing:
+    status: done
+    comment: mypy --strict runs in CI.

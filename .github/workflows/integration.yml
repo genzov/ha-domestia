@@ -1,0 +1,71 @@
+name: Integration
+
+# Checks the Home Assistant custom integration in custom_components/domestia.
+# The Go bridge is checked by ci.yml.
+
+on:
+  push:
+    branches: [main, ha-integration]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      # Installs uv; uv installs the Python version from .python-version
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+
+      - run: uv sync --locked
+
+      - run: uv run ruff format --check .
+
+      - run: uv run ruff check .
+
+      - run: uv run mypy
+
+      - run: uv run pytest --cov=custom_components.domestia --cov-report=term-missing --cov-report=json --cov-fail-under=95
+
+      # --cov-fail-under only checks the total; Silver requires 95% per module
+      - name: Check per-module coverage
+        shell: uv run python {0}
+        run: |
+          import json
+          import sys
+
+          files = json.load(open("coverage.json"))["files"]
+          low = {
+              name: data["summary"]["percent_covered"]
+              for name, data in files.items()
+              if data["summary"]["percent_covered"] < 95
+          }
+          for name, percent in sorted(low.items()):
+              print(f"::error file={name}::Coverage {percent:.1f}% is below 95%")
+          sys.exit(1 if low else 0)
+
+  hassfest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: home-assistant/actions/hassfest@86d4564712fa02543c808e3a693dd04f9d3f8361 # master
+
+  hacs:
+    runs-on: ubuntu-latest
+    steps:
+      # The validator in the Marketplace (formerly HACS) checks hacs.json, the
+      # manifest, brand images and the repository settings
+      - uses: hacs/action@1ebf01c408f29afcb6406bd431bc98fd8cbb15aa # main
+        with:
+          category: integration
+          comment: "false"
