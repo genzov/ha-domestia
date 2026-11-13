@@ -172,7 +172,7 @@ async def test_device_info_without_model(
         pytest.param(
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: HALL_ID},
-            [call.turn_on(3), call.set_max_brightness(3)],
+            [call.turn_on(3)],
             id="non_dimmable",
         ),
         pytest.param(

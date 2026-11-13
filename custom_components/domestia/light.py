@@ -89,10 +89,12 @@ class DomestiaLight(DomestiaEntity, LightEntity):
         client = self.coordinator.client
         relay = self.light.relay
         commands: list[_Command] = [partial(client.turn_on, relay)]
-        if not self.light.dimmable:
-            # A non-dimmable relay can be left dimmed; make sure it is fully on.
-            commands.append(partial(client.set_max_brightness, relay))
-        elif (brightness := kwargs.get(ATTR_BRIGHTNESS)) is not None:
+        # The controller rejects brightness commands for on/off relays with
+        # "NOK", so a non-dimmable light only gets the on command.
+        if (
+            self.light.dimmable
+            and (brightness := kwargs.get(ATTR_BRIGHTNESS)) is not None
+        ):
             # A non-zero brightness must dim the light, not round down to 0
             # and switch it off.
             commands.append(

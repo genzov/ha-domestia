@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.1
+
+- Turning on a non-dimmable light no longer shows a "Failed to control"
+  error. The light already switched on; the error came from a brightness
+  command the controller does not accept for on/off lights.
+
 ## 2.1.0
 
 - Setup no longer has the **Import lights** step for pasting a list of lights.
