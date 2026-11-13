@@ -1,0 +1,44 @@
+# serializer version: 1
+# name: test_diagnostics
+  dict({
+    'coordinator': dict({
+      'data': dict({
+        '1': 64,
+        '2': 32,
+        '3': 0,
+      }),
+      'last_update_success': True,
+    }),
+    'entry': dict({
+      'data': dict({
+        'host': '**REDACTED**',
+        'model': 'DMC-012-003',
+      }),
+      'options': dict({
+      }),
+    }),
+    'lights': list([
+      dict({
+        'always_on': True,
+        'dimmable': False,
+        'name': 'Wardrobe',
+        'relay': 1,
+        'subentry_id': 'wardrobe_subentry',
+      }),
+      dict({
+        'always_on': False,
+        'dimmable': True,
+        'name': 'Garden',
+        'relay': 2,
+        'subentry_id': 'garden_subentry',
+      }),
+      dict({
+        'always_on': False,
+        'dimmable': False,
+        'name': 'Hall',
+        'relay': 3,
+        'subentry_id': 'hall_subentry',
+      }),
+    ]),
+  })
+# ---
