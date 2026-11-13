@@ -5,7 +5,6 @@ from datetime import timedelta
 from typing import override
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.debounce import Debouncer
@@ -69,9 +68,7 @@ class DomestiaCoordinator(DataUpdateCoordinator[dict[int, int]]):
             LOGGER,
             config_entry=entry,
             name=DOMAIN,
-            update_interval=timedelta(
-                seconds=entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
-            ),
+            update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
             request_refresh_debouncer=Debouncer(
                 hass, LOGGER, cooldown=REFRESH_COOLDOWN, immediate=True
             ),

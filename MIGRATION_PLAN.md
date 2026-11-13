@@ -289,6 +289,8 @@ Phase 0 is done on branch `ha-integration`. HA 2026.10/2026.11 differ from older
   uv run pytest
   ```
 
+> **Decision after the Phase 3 audit:** the `scan_interval` options flow was removed to satisfy `appropriate-polling`. Polling is fixed at 2 s; users who want another rate disable polling and call `homeassistant.update_entity`. Plan text that mentions the options flow or `options = {scan_interval}` is superseded.
+
 ### Phase 0: skeleton and contracts (lead, serial, about 1 h)
 
 1. Create the §2 layout. Write `const.py`, `manifest.json`, `hacs.json`, `pyproject.toml`, `uv.lock` (via `uv lock`), `.python-version`, `.pre-commit-config.yaml`, and the full `translations/en.json` with every frozen key.

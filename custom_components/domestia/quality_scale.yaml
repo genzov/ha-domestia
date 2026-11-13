@@ -6,8 +6,9 @@ rules:
   appropriate-polling:
     status: done
     comment: |
-      The controller has no push updates. It is polled every 2 seconds by
-      default, and the interval can be changed in the options.
+      The controller has no push updates, so it is polled every 2 seconds, the
+      interval the Go bridge used. The interval is not configurable; users can
+      disable polling and update the entities from an automation instead.
   brands:
     status: done
     comment: Shipped locally in the brand/ folder.
@@ -49,7 +50,9 @@ rules:
     status: done
     comment: Failed commands raise HomeAssistantError with a translation key.
   config-entry-unloading: done
-  docs-configuration-parameters: done
+  docs-configuration-parameters:
+    status: exempt
+    comment: The integration has no options flow.
   docs-installation-parameters: done
   entity-unavailable:
     status: done

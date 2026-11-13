@@ -46,19 +46,6 @@
       "reconfigure_successful": "The controller was reconfigured."
     }
   },
-  "options": {
-    "step": {
-      "init": {
-        "title": "Domestia options",
-        "data": {
-          "scan_interval": "Polling interval"
-        },
-        "data_description": {
-          "scan_interval": "Seconds between polls of the controller. At least 0.25."
-        }
-      }
-    }
-  },
   "config_subentries": {
     "light": {
       "entry_type": "Light",

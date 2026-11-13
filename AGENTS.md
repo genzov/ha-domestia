@@ -37,12 +37,12 @@ CI (`.github/workflows/integration.yml`) runs ruff, mypy and pytest with at leas
   - The refresh debouncer (`cooldown=0.3, immediate=True`) coalesces the refreshes requested after commands.
 - **`entity.py`**: `DomestiaEntity`, the `CoordinatorEntity` base with `device_info`.
 - **`light.py`**: `DomestiaLight`, one per light subentry that is not `always_on`; setup removes the entity and device of a light switched to `always_on`. `PARALLEL_UPDATES = 1`. A turn-on sends every command (on, then max or the requested brightness) even if one fails, then raises the first error as `HomeAssistantError` with translation key `command_failed`. A refresh is requested in all cases.
-- **`config_flow.py`**: the user step (host, model, connection test with `get_state(1)`), the optional `lights` import step (`parse_lights_json`, which takes the add-on's YAML list, indented or under `lights:`, or a JSON array), reconfigure, the options flow (`scan_interval` in seconds, min 0.25, default 2), and `LightSubentryFlow` (user, reconfigure).
+- **`config_flow.py`**: the user step (host, model, connection test with `get_state(1)`), the optional `lights` import step (`parse_lights_json`, which takes the add-on's YAML list, indented or under `lights:`, or a JSON array), reconfigure and `LightSubentryFlow` (user, reconfigure).
 - **`__init__.py`**: registers the controller device first, then creates the coordinator, runs the first refresh, sets `entry.runtime_data`, adds the update listener, and forwards to `Platform.LIGHT`. `async_remove_config_entry_device` allows removing devices whose subentry is gone.
 - **`diagnostics.py`**: entry data with the host redacted, options, lights, coordinator data and failure count.
 - **`translations/en.json`**: the only strings file (custom integrations have no `strings.json`). **`brand/`**: local icon and logo. **`quality_scale.yaml`**: the self-assessed status of every quality-scale rule; keep it in step with the code.
 
-Data model: one config entry per controller (`unique_id = host`, `data = {host, model}`, `options = {scan_interval}`), and one subentry of type `"light"` per relay (`title` = name, or `Relay <n>` for a nameless always-on light, `unique_id = str(relay)`, `data = {relay, dimmable, always_on}`).
+Data model: one config entry per controller (`unique_id = host`, `data = {host, model}`), and one subentry of type `"light"` per relay (`title` = name, or `Relay <n>` for a nameless always-on light, `unique_id = str(relay)`, `data = {relay, dimmable, always_on}`).
 
 ### Rules
 

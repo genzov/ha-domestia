@@ -16,10 +16,9 @@ from homeassistant.config_entries import (
     ConfigFlowResult,
     ConfigSubentryData,
     ConfigSubentryFlow,
-    OptionsFlow,
     SubentryFlowResult,
 )
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_SCAN_INTERVAL, UnitOfTime
+from homeassistant.const import CONF_HOST, CONF_NAME
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.selector import (
@@ -42,11 +41,9 @@ from .const import (
     CONF_LIGHTS,
     CONF_MODEL,
     CONF_RELAY,
-    DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     MAX_RELAY,
     MIN_RELAY,
-    MIN_SCAN_INTERVAL,
     MODELS,
     SUBENTRY_TYPE_LIGHT,
 )
@@ -196,13 +193,6 @@ class DomestiaConfigFlow(ConfigFlow, domain=DOMAIN):
         """Start a flow without controller data."""
         self._data: dict[str, Any] = {}
 
-    @staticmethod
-    @callback
-    @override
-    def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
-        """Return the options flow."""
-        return DomestiaOptionsFlow()
-
     @classmethod
     @callback
     @override
@@ -293,38 +283,6 @@ class DomestiaConfigFlow(ConfigFlow, domain=DOMAIN):
             ),
             errors=errors,
         )
-
-
-class DomestiaOptionsFlow(OptionsFlow):
-    """Change how often the controller is polled."""
-
-    async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Ask for the polling interval."""
-        if user_input is not None:
-            return self.async_create_entry(
-                data={CONF_SCAN_INTERVAL: float(user_input[CONF_SCAN_INTERVAL])}
-            )
-
-        schema = probatio.Schema(
-            {
-                probatio.Required(
-                    CONF_SCAN_INTERVAL,
-                    default=self.config_entry.options.get(
-                        CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
-                    ),
-                ): NumberSelector(
-                    NumberSelectorConfig(
-                        min=MIN_SCAN_INTERVAL,
-                        step=0.05,
-                        mode=NumberSelectorMode.BOX,
-                        unit_of_measurement=UnitOfTime.SECONDS,
-                    )
-                ),
-            }
-        )
-        return self.async_show_form(step_id="init", data_schema=schema)
 
 
 def _light_from_input(user_input: dict[str, Any]) -> ConfigSubentryData:

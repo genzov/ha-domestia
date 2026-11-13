@@ -1,13 +1,12 @@
 """Tests for the Domestia config flow."""
 
 from collections.abc import Generator
-from datetime import timedelta
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from homeassistant.config_entries import SOURCE_USER, ConfigSubentryData
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_SCAN_INTERVAL
+from homeassistant.const import CONF_HOST, CONF_NAME
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType, InvalidData
 from pytest_homeassistant.common import MockConfigEntry
@@ -452,40 +451,6 @@ async def test_reconfigure_host_of_other_entry(
     assert result["reason"] == "already_configured"
     assert mock_config_entry.unique_id == HOST
     mock_client.get_state.assert_not_awaited()
-
-
-async def test_options_scan_interval(
-    hass: HomeAssistant, init_integration: MockConfigEntry
-) -> None:
-    """The options flow stores the interval in seconds and the entry reloads."""
-    result = await hass.config_entries.options.async_init(init_integration.entry_id)
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "init"
-    schema = result["data_schema"]
-    assert schema is not None
-    assert schema({}) == {CONF_SCAN_INTERVAL: 2.0}
-
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {CONF_SCAN_INTERVAL: 0.25}
-    )
-    await hass.async_block_till_done()
-
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert init_integration.options == {CONF_SCAN_INTERVAL: 0.25}
-    coordinator = init_integration.runtime_data
-    assert coordinator.update_interval == timedelta(seconds=0.25)
-
-
-@pytest.mark.parametrize("value", [0.24, 0, -1])
-async def test_options_scan_interval_too_low(
-    hass: HomeAssistant, init_integration: MockConfigEntry, value: float
-) -> None:
-    """Intervals below 0.25 seconds are rejected by the selector."""
-    result = await hass.config_entries.options.async_init(init_integration.entry_id)
-    with pytest.raises(InvalidData):
-        await hass.config_entries.options.async_configure(
-            result["flow_id"], {CONF_SCAN_INTERVAL: value}
-        )
 
 
 async def _start_light_flow(hass: HomeAssistant, entry: MockConfigEntry) -> str:

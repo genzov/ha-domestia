@@ -22,10 +22,10 @@ SUBENTRY_TYPE_LIGHT: Final = "light"
 MIN_RELAY: Final = 1
 MAX_RELAY: Final = 255
 
-# Poll interval in seconds. Every poll opens a new TCP connection to the
-# controller, so a tiny interval would hammer it.
+# Poll interval in seconds. The controller cannot push changes. Like Home
+# Assistant requires, the interval is not configurable: users who want another
+# rate disable polling and call homeassistant.update_entity themselves.
 DEFAULT_SCAN_INTERVAL: Final = 2.0
-MIN_SCAN_INTERVAL: Final = 0.25
 
 # Consecutive failed polls before the lights are marked unavailable.
 MAX_CONSECUTIVE_FAILURES: Final = 3

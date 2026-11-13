@@ -144,19 +144,17 @@ The integration reloads after each change.
 **Change the controller's host or model:** open the integration entry's menu
 and select **Reconfigure**. The new host is tested before it is saved.
 
-### Options
-
-Select **Configure** on the integration entry.
-
-| Option               | Default | Description                                                    |
-| -------------------- | ------- | -------------------------------------------------------------- |
-| **Polling interval** | `2`     | Seconds between polls of the controller. At least `0.25`.      |
-
 ### Data updates
 
-The controller cannot push changes, so the integration **polls** it, every 2
-seconds by default (see [Options](#options)). Changes made at a wall panel
-therefore show up in Home Assistant within one polling interval.
+The controller cannot push changes, so the integration **polls** it every 2
+seconds. Changes made at a wall panel therefore show up in Home Assistant
+within 2 seconds.
+
+To poll at another rate, open the integration entry's menu, select **System
+options**, turn off **Enable polling for changes**, and create an automation
+that calls the `homeassistant.update_entity` action on one of the Domestia
+lights as often as you like. One update refreshes all lights of the
+controller.
 
 - After a command from Home Assistant, the integration polls again right away,
   so the new state shows without waiting for the next poll. Further commands
