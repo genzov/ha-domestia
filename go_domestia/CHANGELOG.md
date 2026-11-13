@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.1
+
+- This is the last release of the add-on. It is replaced by the Domestia
+  integration, which connects Home Assistant to the controller directly,
+  without MQTT or an add-on, and keeps your entity ids and history. Follow
+  [Migrating from the add-on](https://github.com/genzov/go-domestia#migrating-from-the-add-on)
+  to switch. The add-on keeps working, but gets no further updates.
+
 ## 1.4.0
 
 - Lights now reflect their real state in Home Assistant after a short MQTT

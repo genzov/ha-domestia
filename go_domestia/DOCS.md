@@ -1,5 +1,10 @@
 # Domestia Bridge
 
+> [!WARNING]
+> This add-on is deprecated and gets no further updates. It is replaced by the
+> Domestia integration; see
+> [Migrating from the add-on](https://github.com/genzov/go-domestia#migrating-from-the-add-on).
+
 Bridges a Domestia lighting controller to Home Assistant over MQTT, exposing
 each relay as a light through MQTT discovery — no manual entity configuration
 required.
