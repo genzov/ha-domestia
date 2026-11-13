@@ -1,4 +1,4 @@
-"""Tests for the brightness conversions, ported from bridge/light_state_test.go."""
+"""Tests for the brightness conversions."""
 
 import pytest
 

@@ -1,7 +1,6 @@
 """Shared fixtures.
 
-Read-only after Phase 0 (see MIGRATION_PLAN.md): fixtures specific to one area
-belong in that area's test file.
+Fixtures specific to one area belong in that area's test file.
 """
 
 from collections.abc import Generator

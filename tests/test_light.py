@@ -191,7 +191,7 @@ async def test_commands(
     data: dict[str, Any],
     expected: list[Any],
 ) -> None:
-    """Commands send the Go bridge's call sequence, then refresh the state."""
+    """Commands send the expected call sequence, then refresh the state."""
     mock_client.reset_mock()
 
     await hass.services.async_call(LIGHT_DOMAIN, service, data, blocking=True)

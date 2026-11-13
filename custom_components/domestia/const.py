@@ -12,7 +12,6 @@ MANUFACTURER: Final = "Domestia"
 MODELS: Final = ("DMC-012-003", "DMC-008-001")
 
 CONF_MODEL: Final = "model"
-CONF_LIGHTS: Final = "lights"
 CONF_RELAY: Final = "relay"
 CONF_DIMMABLE: Final = "dimmable"
 CONF_ALWAYS_ON: Final = "always_on"

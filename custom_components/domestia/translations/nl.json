@@ -12,16 +12,6 @@
           "model": "Controllermodel, weergegeven op de apparaten. Optioneel."
         }
       },
-      "lights": {
-        "title": "Lampen importeren",
-        "description": "Plak optioneel de lijst `lights` uit de configuratie van de Domestia Bridge-add-on. Laat leeg om later lampen toe te voegen.",
-        "data": {
-          "lights": "Lampen"
-        },
-        "data_description": {
-          "lights": "De lijst `lights` als YAML, gekopieerd van het tabblad Configuratie van de add-on in YAML-modus, of als JSON-array. Elke lamp heeft `name`, `relay` en de optionele `dimmable` en `always_on`."
-        }
-      },
       "reconfigure": {
         "title": "Je Domestia-controller opnieuw configureren",
         "data": {
@@ -35,11 +25,7 @@
       }
     },
     "error": {
-      "cannot_connect": "Verbinden met de controller is mislukt.",
-      "invalid_lights_json": "De lampen moeten een lijst met lampen in YAML of JSON zijn.",
-      "invalid_relay": "Elke lamp heeft een relaisnummer tussen 1 en 255 nodig.",
-      "duplicate_relay": "Twee lampen gebruiken hetzelfde relais.",
-      "name_required": "Elke lamp die niet altijd aan staat heeft een naam nodig."
+      "cannot_connect": "Verbinden met de controller is mislukt."
     },
     "abort": {
       "already_configured": "Deze controller is al geconfigureerd.",

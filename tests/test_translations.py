@@ -16,11 +16,7 @@ import probatio
 import pytest
 
 from custom_components.domestia import config_flow
-from custom_components.domestia.config_flow import (
-    LIGHT_SCHEMA,
-    LIGHTS_SCHEMA,
-    USER_SCHEMA,
-)
+from custom_components.domestia.config_flow import LIGHT_SCHEMA, USER_SCHEMA
 from custom_components.domestia.const import SUBENTRY_TYPE_LIGHT
 
 TRANSLATIONS: dict[str, Any] = json.loads(
@@ -39,14 +35,12 @@ def _keys(schema: probatio.Schema) -> set[str]:
     ("step", "fields"),
     [
         (TRANSLATIONS["config"]["step"]["user"], _keys(USER_SCHEMA)),
-        (TRANSLATIONS["config"]["step"]["lights"], _keys(LIGHTS_SCHEMA)),
         (TRANSLATIONS["config"]["step"]["reconfigure"], _keys(USER_SCHEMA)),
         (SUBENTRY["step"]["user"], _keys(LIGHT_SCHEMA)),
         (SUBENTRY["step"]["reconfigure"], _keys(LIGHT_SCHEMA)),
     ],
     ids=[
         "user",
-        "lights",
         "reconfigure",
         "light user",
         "light reconfigure",
@@ -98,12 +92,7 @@ DEFINITIONS = {
 
 def test_config_errors_and_aborts_translated() -> None:
     """Errors and aborts of the config flow exist in the translations."""
-    errors = (
-        _string_args(DEFINITIONS["parse_lights_json"], "InvalidLightsError")
-        | _string_args(DEFINITIONS["_parse_light"], "InvalidLightsError")
-        | _string_args(DEFINITIONS["_light_subentry"], "InvalidLightsError")
-        | _literals(DEFINITIONS["DomestiaConfigFlow"])
-    )
+    errors = _literals(DEFINITIONS["DomestiaConfigFlow"])
     # _abort_if_unique_id_configured aborts with already_configured.
     aborts = _literals(DEFINITIONS["DomestiaConfigFlow"], keyword="reason") | {
         "already_configured"
@@ -116,9 +105,7 @@ def test_config_errors_and_aborts_translated() -> None:
 
 def test_subentry_errors_and_aborts_translated() -> None:
     """Errors and aborts of the light subentry flow exist in the translations."""
-    errors = _string_args(
-        DEFINITIONS["_light_from_input"], "InvalidLightsError"
-    ) | _string_args(DEFINITIONS["_light_subentry"], "InvalidLightsError")
+    errors = _string_args(DEFINITIONS["_light_from_input"], "InvalidLightError")
     aborts = _literals(DEFINITIONS["LightSubentryFlow"], keyword="reason")
 
     assert errors

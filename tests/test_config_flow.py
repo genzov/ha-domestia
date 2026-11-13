@@ -5,21 +5,16 @@ from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from homeassistant.config_entries import SOURCE_USER, ConfigSubentryData
+from homeassistant.config_entries import SOURCE_USER
 from homeassistant.const import CONF_HOST, CONF_NAME
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType, InvalidData
 from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.domestia.api import DomestiaConnectionError
-from custom_components.domestia.config_flow import (
-    InvalidLightsError,
-    parse_lights_json,
-)
 from custom_components.domestia.const import (
     CONF_ALWAYS_ON,
     CONF_DIMMABLE,
-    CONF_LIGHTS,
     CONF_MODEL,
     CONF_RELAY,
     DOMAIN,
@@ -47,31 +42,6 @@ def mock_setup_entry(request: pytest.FixtureRequest) -> Generator[AsyncMock | No
         yield setup_entry
 
 
-def light(
-    name: str, relay: int, *, dimmable: bool = False, always_on: bool = False
-) -> ConfigSubentryData:
-    """Return the subentry the flows create for a light."""
-    return ConfigSubentryData(
-        data={CONF_RELAY: relay, CONF_DIMMABLE: dimmable, CONF_ALWAYS_ON: always_on},
-        subentry_type=SUBENTRY_TYPE_LIGHT,
-        title=name,
-        unique_id=str(relay),
-    )
-
-
-async def _start_user_flow(hass: HomeAssistant, user_input: dict[str, Any]) -> str:
-    """Complete the user step and return the flow id, now at the lights step."""
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": SOURCE_USER}
-    )
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], user_input
-    )
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "lights"
-    return result["flow_id"]
-
-
 async def test_user_creates_entry(
     hass: HomeAssistant, mock_client: AsyncMock, mock_setup_entry: AsyncMock
 ) -> None:
@@ -85,10 +55,6 @@ async def test_user_creates_entry(
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {CONF_HOST: HOST, CONF_MODEL: "DMC-012-003"}
     )
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "lights"
-
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == HOST
@@ -115,9 +81,11 @@ async def test_user_model(
 ) -> None:
     """A chosen model is stored; an omitted model leaves the key out."""
     del mock_client
-    flow_id = await _start_user_flow(hass, user_input)
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_USER}
+    )
     result = await hass.config_entries.flow.async_configure(
-        flow_id, {CONF_LIGHTS: "  "}
+        result["flow_id"], user_input
     )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -156,10 +124,6 @@ async def test_user_cannot_connect(hass: HomeAssistant, mock_client: AsyncMock) 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {CONF_HOST: HOST}
     )
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "lights"
-
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
 
@@ -178,180 +142,6 @@ async def test_user_already_configured(
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
     mock_client.get_state.assert_not_awaited()
-
-
-async def test_lights_import(hass: HomeAssistant, mock_client: AsyncMock) -> None:
-    """The pasted add-on lights become one subentry per relay."""
-    del mock_client
-    flow_id = await _start_user_flow(hass, {CONF_HOST: HOST})
-    result = await hass.config_entries.flow.async_configure(
-        flow_id,
-        {
-            CONF_LIGHTS: """[
-                {"name": "Garden", "relay": 2, "dimmable": true},
-                {"name": "Hall", "relay": 3},
-                {"relay": 1, "always_on": true}
-            ]"""
-        },
-    )
-
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    subentries = {
-        subentry.unique_id: (subentry.subentry_type, subentry.title, subentry.data)
-        for subentry in result["result"].subentries.values()
-    }
-    data = {CONF_DIMMABLE: False, CONF_ALWAYS_ON: False}
-    assert subentries == {
-        "2": ("light", "Garden", {CONF_RELAY: 2, **data, CONF_DIMMABLE: True}),
-        "3": ("light", "Hall", {CONF_RELAY: 3, **data}),
-        "1": ("light", "Relay 1", {CONF_RELAY: 1, **data, CONF_ALWAYS_ON: True}),
-    }
-
-
-async def test_lights_invalid_then_recover(
-    hass: HomeAssistant, mock_client: AsyncMock
-) -> None:
-    """Invalid lights show the parse error, and corrected lights are accepted."""
-    del mock_client
-    flow_id = await _start_user_flow(hass, {CONF_HOST: HOST})
-    bad = '[{"name": "Garden", "relay": 2}, {"name": "Hall", "relay": 2}]'
-    result = await hass.config_entries.flow.async_configure(flow_id, {CONF_LIGHTS: bad})
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "lights"
-    assert result["errors"] == {"base": "duplicate_relay"}
-
-    result = await hass.config_entries.flow.async_configure(
-        flow_id, {CONF_LIGHTS: '[{"name": "Garden", "relay": 2}]'}
-    )
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert [s.title for s in result["result"].subentries.values()] == ["Garden"]
-
-
-@pytest.mark.parametrize(
-    ("text", "expected"),
-    [
-        (
-            '[{"name":"Garden","relay":2},{"name":"Hall","relay":3,"always_on":true}]',
-            [light("Garden", 2), light("Hall", 3, always_on=True)],
-        ),
-        (
-            (
-                '[{"name":"Hall","relay":2,"always_on":true},'
-                '{"name":"Hall","relay":3,"always_on":true}]'
-            ),
-            [light("Hall", 2, always_on=True), light("Hall", 3, always_on=True)],
-        ),
-        (
-            '[{"relay":5,"always_on":true},{"name":" ","relay":6,"always_on":true}]',
-            [light("Relay 5", 5, always_on=True), light("Relay 6", 6, always_on=True)],
-        ),
-        (
-            '[{"name":" Porch ","relay":255,"dimmable":true}]',
-            [light("Porch", 255, dimmable=True)],
-        ),
-        ("[]", []),
-        (
-            # Copied from the add-on's YAML view with its indent
-            "  - name: Garden\n    relay: 2\n  - name: Hall\n    relay: 3\n",
-            [light("Garden", 2), light("Hall", 3)],
-        ),
-        (
-            # Selected from the first "-", losing only the first line's indent
-            "- name: Garden\n    relay: 2\n  - name: Hall\n    relay: 3\n",
-            [light("Garden", 2), light("Hall", 3)],
-        ),
-        (
-            # One-line items selected from the first "-"
-            "- {name: Garden, relay: 2}\n  - {name: Hall, relay: 3}\n",
-            [light("Garden", 2), light("Hall", 3)],
-        ),
-        (
-            # A single item selected from its "-"
-            "- name: Garden\n    relay: 2\n",
-            [light("Garden", 2)],
-        ),
-        (
-            # Including the enclosing key
-            "lights:\n  - name: Garden\n    relay: 2\n",
-            [light("Garden", 2)],
-        ),
-        (
-            # As copied from the add-on's Configuration tab in YAML mode
-            (
-                "- name: Garden\n  relay: 2\n  dimmable: true\n"
-                "- name: Hall\n  relay: 3\n"
-                "- name: Wardrobe\n  relay: 1\n  always_on: true\n"
-            ),
-            [
-                light("Garden", 2, dimmable=True),
-                light("Hall", 3),
-                light("Wardrobe", 1, always_on=True),
-            ],
-        ),
-    ],
-    ids=[
-        "valid",
-        "always-on names may repeat",
-        "always-on without name",
-        "max relay, dimmable",
-        "empty",
-        "indented YAML",
-        "YAML selected from the first dash",
-        "one-line items selected from the first dash",
-        "single item selected from its dash",
-        "lights key",
-        "add-on YAML",
-    ],
-)
-def test_parse_lights_json(text: str, expected: list[ConfigSubentryData]) -> None:
-    """Valid lights arrays parse into light subentries."""
-    assert parse_lights_json(text) == expected
-
-
-@pytest.mark.parametrize(
-    ("text", "error"),
-    [
-        ('[{"name":"Garden","relay":0}]', "invalid_relay"),
-        ('[{"name":"Garden"}]', "invalid_relay"),
-        ('[{"name":"Garden","relay":256}]', "invalid_relay"),
-        ('[{"name":"Garden","relay":true}]', "invalid_relay"),
-        ('[{"name":"Garden","relay":"2"}]', "invalid_relay"),
-        ('[{"name":"Garden","relay":2.5}]', "invalid_relay"),
-        ('[{"name":"Garden","relay":2},{"name":"Hall","relay":2}]', "duplicate_relay"),
-        ('[{"name":" ","relay":2}]', "name_required"),
-        ('[{"relay":2}]', "name_required"),
-        ("[null]", "invalid_lights_json"),
-        ("[1]", "invalid_lights_json"),
-        ('{"name":"Garden","relay":2}', "invalid_lights_json"),
-        ("[{", "invalid_lights_json"),
-        ('[{"name":3,"relay":2}]', "invalid_lights_json"),
-        ('[{"name":"Garden","relay":2,"dimmable":"yes"}]', "invalid_lights_json"),
-        ('[{"name":"Garden","relay":2,"always_on":1}]', "invalid_lights_json"),
-    ],
-    ids=[
-        "relay 0",
-        "relay missing",
-        "relay 256",
-        "bool relay",
-        "string relay",
-        "float relay",
-        "duplicate relay",
-        "empty name",
-        "name missing",
-        "null light",
-        "light not an object",
-        "not an array",
-        "bad JSON",
-        "name not a string",
-        "dimmable not a bool",
-        "always_on not a bool",
-    ],
-)
-def test_parse_lights_json_invalid(text: str, error: str) -> None:
-    """Invalid lights arrays raise the matching form error."""
-    with pytest.raises(InvalidLightsError) as err:
-        parse_lights_json(text)
-    assert err.value.translation_key == error
 
 
 async def test_reconfigure(

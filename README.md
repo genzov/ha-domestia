@@ -2,10 +2,8 @@
 
 The **Domestia** integration connects Home Assistant directly to a Domestia
 lighting controller over your local network. It controls each relay on the
-controller as a Home Assistant light, without an MQTT broker, a bridge or an
-add-on. It replaces the go-domestia MQTT bridge and the Domestia Bridge add-on
-(versions 1.x of this repository); see
-[Migrating from the add-on](#migrating-from-the-add-on).
+controller as a Home Assistant light, without an MQTT broker or any other
+software in between.
 
 The integration polls the controller over TCP port 52001, shows each configured
 relay as a light with its own device, and sends on, off and brightness commands
@@ -85,51 +83,28 @@ published.
    The integration connects to the controller before it continues. If it can't,
    the form shows "Failed to connect to the controller." and you can correct the
    host and try again. Each controller can be added only once per IP address or hostname.
-3. On **Import lights**, you can paste your lights into **Lights**, or leave it
-   empty and add lights one by one later. This is the `lights` list from the
-   Domestia Bridge add-on's **Configuration** tab, copied in YAML mode:
-
-   ```yaml
-   - name: Garden
-     relay: 2
-   - name: Living room
-     relay: 13
-     dimmable: true
-   - name: Wardrobe
-     relay: 1
-     always_on: true
-   ```
-
-   A JSON array works too, e.g. `[{"name": "Garden", "relay": 2}]`. In YAML,
-   quote names that YAML reads as something else, such as `"On"` or `"Yes"`.
-
-   | Key         | Required                   | Description                                                            |
-   | ----------- | -------------------------- | ---------------------------------------------------------------------- |
-   | `name`      | yes, unless `always_on`    | Name of the light and its device.                                      |
-   | `relay`     | yes                        | Relay number on the controller, from 1 to 255. Each relay only once.   |
-   | `dimmable`  | no, defaults to `false`    | Whether the relay can dim the light.                                   |
-   | `always_on` | no, defaults to `false`    | Keep the relay on at full brightness and hide it from Home Assistant.  |
-
-   Invalid input is reported on the form: "The lights must be a list of lights
-   in YAML or JSON.", "Every light needs a relay number between 1 and 255.", "Two lights
-   use the same relay." or "Every light that is not always on needs a name."
-4. Submit. Each light becomes a light entry under the controller. Lights that
-   are not always on also get their own device and entity. The entity id is
-   `light.<name>` with the name turned into an id the usual Home Assistant way,
-   e.g. `Living room` becomes `light.living_room`. If that id is already taken,
-   Home Assistant adds a suffix such as `_2`. An always-on light without a name
-   is called `Relay <number>`. Pasting the list together with its `lights:`
-   line also works.
+3. Add your lights one by one, as described in [Managing lights](#managing-lights).
 
 ## Managing lights
 
 Every light is a **light entry** (a config subentry) of the controller's
 integration entry, under **Settings → Devices & services → Domestia**.
 
-- **Add a light:** select **Add light** and fill in **Name**, **Relay**,
-  **Dimmable** and **Always on**, which have the same meaning as the JSON keys
-  above. A relay that already has a light is refused with "This relay already
-  has a light."
+- **Add a light:** select **Add light** and fill in:
+
+  | Field         | Required                | Description                                                           |
+  | ------------- | ----------------------- | --------------------------------------------------------------------- |
+  | **Name**      | yes, unless always on   | Name of the light and its device.                                     |
+  | **Relay**     | yes                     | Relay number on the controller, from 1 to 255.                        |
+  | **Dimmable**  | no, defaults to off     | Whether the relay can dim the light.                                  |
+  | **Always on** | no, defaults to off     | Keep the relay on at full brightness and hide it from Home Assistant. |
+
+  A relay that already has a light is refused with "This relay already has a
+  light." Lights that are not always on get their own device and entity. The
+  entity id is `light.<name>` with the name turned into an id the usual Home
+  Assistant way, e.g. `Living room` becomes `light.living_room`. If that id is
+  already taken, Home Assistant adds a suffix such as `_2`. An always-on light
+  without a name is called `Relay <number>`.
 - **Edit a light:** open the light entry's menu and select **Reconfigure**. You
   can rename it, move it to another relay, or change dimmable and always on.
   The entity, device and history are kept, even when the relay changes. Turning
@@ -208,8 +183,7 @@ automation:
   cannot be told apart. Enter its host by hand, and give it a DHCP reservation
   in your router. If its address changes anyway, use **Reconfigure**.
 - **The controller reports no names.** It only reports a brightness per relay,
-  so every light has to be configured by hand, or imported from the add-on
-  configuration.
+  so every light has to be configured by hand.
 - **One request at a time.** The controller handles one TCP client at a time.
   The integration sends one request at a time and opens a new connection for
   each, so other software polling the same controller can cause failed polls.
@@ -228,8 +202,8 @@ automation:
 - Check that Home Assistant can reach TCP port 52001, for example from the SSH
   add-on with `nc -vz 192.168.1.2 52001`. Firewalls and VLANs between Home
   Assistant and the controller must allow it.
-- Stop other software that talks to the controller, such as the Domestia Bridge
-  add-on, because the controller handles one client at a time.
+- Stop other software that talks to the controller, because the controller
+  handles one client at a time.
 
 **The lights are unavailable**
 
@@ -276,47 +250,6 @@ The controller's host is redacted from it.
    - **Manual installation:** delete `/config/custom_components/domestia`.
 3. Restart Home Assistant.
 
-## Migrating from the add-on
-
-The integration replaces the Domestia Bridge add-on. Run one of the two, never
-both, because the controller handles one client at a time. History carries
-over when the new entities get the same entity ids as the old ones.
-
-1. Note the entity ids of your Domestia lights, e.g. `light.garden`, and copy
-   the `lights` list from the add-on's **Configuration** tab (in YAML mode).
-   The import step accepts it as is; see [Setup](#setup).
-2. Install the integration as described in [Installation](#installation) and
-   restart Home Assistant. Don't add it yet.
-3. Stop the **Domestia Bridge** add-on and turn off **Start on boot**. Its
-   lights become unavailable.
-4. Remove the old MQTT lights so their entity ids are freed. The bridge
-   published its discovery configs as retained messages, so clear them on the
-   broker, for every light, with the entity part being the light name
-   lowercased with spaces replaced by `_`:
-
-   ```sh
-   mosquitto_pub -h <broker> -u <username> -P <password> -r -n -t homeassistant/light/<entity>/config
-   mosquitto_pub -h <broker> -u <username> -P <password> -r -n -t domestia/light/<entity>/state
-   ```
-
-   Once for all lights, clear the bridge's availability topic too:
-
-   ```sh
-   mosquitto_pub -h <broker> -u <username> -P <password> -r -n -t domestia/bridge/availability
-   ```
-
-   Then check under **Settings → Devices & services → MQTT → Devices** that the
-   Domestia devices are gone, and delete any that are left.
-5. Add the Domestia integration as described in [Setup](#setup), and paste the
-   `lights` array in the import step.
-6. Check that the entity ids match the ones from step 1, and rename any that
-   don't. Check your automations, scripts and dashboards.
-7. Test switching on and off, dimming, a non-dimmable light and an always-on
-   relay: switch it off at a wall panel and check that it comes back on. Then
-   unplug the controller, check that the lights become unavailable after about
-   3 polls, and that they recover once it is back.
-8. After a week or so without problems, uninstall the add-on.
-
 ## Development
 
 The integration is developed with [uv](https://docs.astral.sh/uv/), which also
@@ -330,7 +263,6 @@ uv run ruff format .           # format
 uv run mypy                    # strict type checking
 uv run pre-commit install      # run the checks on each commit
 ```
-
 
 Releases are published from GitHub when the `version` in
 `custom_components/domestia/manifest.json` changes on `main`; see

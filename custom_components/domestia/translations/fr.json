@@ -12,16 +12,6 @@
           "model": "Modèle du contrôleur, affiché sur les appareils. Facultatif."
         }
       },
-      "lights": {
-        "title": "Importer les lumières",
-        "description": "Collez éventuellement la liste `lights` de la configuration du module complémentaire Domestia Bridge. Laissez vide pour ajouter des lumières plus tard.",
-        "data": {
-          "lights": "Lumières"
-        },
-        "data_description": {
-          "lights": "La liste `lights` au format YAML, copiée depuis l'onglet Configuration du module complémentaire en mode YAML, ou sous forme de tableau JSON. Chaque lumière a `name`, `relay` et les champs facultatifs `dimmable` et `always_on`."
-        }
-      },
       "reconfigure": {
         "title": "Reconfigurer votre contrôleur Domestia",
         "data": {
@@ -35,11 +25,7 @@
       }
     },
     "error": {
-      "cannot_connect": "Impossible de se connecter au contrôleur.",
-      "invalid_lights_json": "Les lumières doivent être une liste de lumières en YAML ou en JSON.",
-      "invalid_relay": "Chaque lumière nécessite un numéro de relais compris entre 1 et 255.",
-      "duplicate_relay": "Deux lumières utilisent le même relais.",
-      "name_required": "Chaque lumière qui n'est pas toujours allumée doit avoir un nom."
+      "cannot_connect": "Impossible de se connecter au contrôleur."
     },
     "abort": {
       "already_configured": "Ce contrôleur est déjà configuré.",

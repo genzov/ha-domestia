@@ -6,9 +6,9 @@ rules:
   appropriate-polling:
     status: done
     comment: |
-      The controller has no push updates, so it is polled every 2 seconds, the
-      interval the Go bridge used. The interval is not configurable; users can
-      disable polling and update the entities from an automation instead.
+      The controller has no push updates, so it is polled every 2 seconds. The
+      interval is not configurable; users can disable polling and update the
+      entities from an automation instead.
   brands:
     status: done
     comment: Shipped locally in the brand/ folder.
