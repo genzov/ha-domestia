@@ -1,5 +1,7 @@
 # Migration plan: go-domestia bridge → native Home Assistant integration
 
+> **Status: completed on 2026-11-13.** The Go bridge and the add-on were removed in Phase 5; the last add-on release is 1.4.0 and the first integration release is 2.0.0. This plan is kept as a record of the design decisions.
+
 Goal: replace the Go MQTT bridge and add-on with a Python custom integration, `custom_components/domestia`, installed through HA's built-in **Marketplace** (HACS was merged into core in 2026.11 and reads the same `hacs.json`) or by copying the folder. It talks to the controller directly over TCP port 52001. Target: **Silver complete, Gold wherever feasible**, recorded in `quality_scale.yaml`.
 
 Custom integrations are unranked ("📦 Custom") on the official scale, so the tier is **self-assessed**. It is still checked rule by rule, using the same rule ids core uses.

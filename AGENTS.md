@@ -1,11 +1,8 @@
 # AGENTS.md
 
-go-domestia connects a Domestia lighting controller (binary protocol over TCP port 52001) to Home Assistant. It is being migrated (see `MIGRATION_PLAN.md`):
+This repository holds **Domestia**, a Home Assistant custom integration (`custom_components/domestia`, Python) that connects a Domestia lighting controller (binary protocol over TCP port 52001) directly to Home Assistant. It targets HA 2026.11.1 and is installed through HA's built-in Marketplace (formerly HACS) or by copying the folder. It replaced the earlier Go MQTT bridge and its add-on (releases 1.x, removed from the tree; see `MIGRATION_PLAN.md` and the git history).
 
-- **Home Assistant integration** (`custom_components/domestia`, Python): the new path. HA talks to the controller directly, without MQTT. Targets HA 2026.11.1 and is installed through HA's built-in Marketplace or by copying the folder.
-- **Legacy Go bridge and add-on**: bridges the controller to HA over MQTT discovery, shipped as a static Go binary in a `scratch` Docker image and as a Home Assistant add-on (`go_domestia/`). It stays working until Phase 5 of the plan, which removes it.
-
-`domestia.json` is git-ignored and holds real controller IPs and MQTT credentials. Never read or commit it. Use `domestia.sample.json` as the template, and only `192.168.1.x` sample addresses in docs and tests.
+`domestia.json` is a git-ignored leftover of the Go bridge that holds real controller IPs and MQTT credentials. Never read or commit it. Use only `192.168.1.x` sample addresses in docs and tests.
 
 ## Home Assistant integration
 
@@ -27,7 +24,7 @@ CI (`.github/workflows/integration.yml`) runs ruff, mypy and pytest with at leas
 
 ### Architecture
 
-- **`api.py`**: `DomestiaClient`, a pure asyncio client with **no HA imports** (tests check this), so it can move to PyPI later. Every request opens a fresh TCP connection, serialized by an `asyncio.Lock`. Connecting, writing and waiting for the first reply bytes each have their own 3 s timeout; later reads wait at most 250 ms, and the buffer is capped at 258 bytes (the 3-byte header plus relay 255). Also `pack_command`, `parse_state`, `read_response`, `normalize_brightness` and the `DomestiaError` / `DomestiaConnectionError` / `DomestiaProtocolError` hierarchy. The wire protocol is the one described under the legacy `domestia/` package below.
+- **`api.py`**: `DomestiaClient`, a pure asyncio client with **no HA imports** (tests check this), so it can move to PyPI later. Every request opens a fresh TCP connection, serialized by an `asyncio.Lock`. Connecting, writing and waiting for the first reply bytes each have their own 3 s timeout; later reads wait at most 250 ms, and the buffer is capped at 258 bytes (the 3-byte header plus relay 255). Also `pack_command`, `parse_state`, `read_response`, `normalize_brightness` and the `DomestiaError` / `DomestiaConnectionError` / `DomestiaProtocolError` hierarchy. Wire protocol: frames are `0xff 0x00 0x00 <len> <cmd...> <checksum>`, where the checksum is the byte sum of cmd. Commands: `0x3c` get state, `0x0e` on, `0x0f` off, `0x10` brightness. Commands reply `"OK"`. Get-state replies `0xff`, then two status bytes, then one byte per relay (relay number = index + 1).
 - **`brightness.py`**: pure `to_ha`, `to_domestia` and `describe_state`.
 - **`const.py`**: `DOMAIN`, `CONF_*`, `MODELS`, `SUBENTRY_TYPE_LIGHT`, scan interval defaults, `MAX_CONSECUTIVE_FAILURES`, `LOGGER`.
 - **`coordinator.py`**: `DomestiaCoordinator` (`DataUpdateCoordinator[dict[int, int]]`, relay → normalized 0–64 for configured relays) and the `LightConfig` dataclass built from the entry's light subentries.
@@ -48,7 +45,7 @@ Data model: one config entry per controller (`unique_id = host`, `data = {host, 
 
 - **Identity:** the light entity's `unique_id` and its device identifier `(DOMAIN, subentry_id)` are the **subentry_id**. Never key on the relay: rewiring a light to another relay through reconfigure must keep its entity, device and history. The controller device is `(DOMAIN, entry.entry_id)`. Changing any of these breaks users' entities.
 - **One reload mechanism:** the update listener calls `async_schedule_reload`. Subentry add/remove, options and reconfigure all trigger it by updating the config entry or its subentries. Reconfigure steps call `async_update_entry` / `async_update_subentry`, then `async_abort(reason="reconfigure_successful")`. Never use `async_update_reload_and_abort`: the subentry version raises `ValueError` and the entry version double-reloads when a listener exists.
-- **Brightness rounding:** port the Go formulas literally with `math.floor(x + 0.5)` and clamp. Never use `round()` (banker's rounding) or HA's `color_util` brightness helpers; both break the 0–64 round-trip test. `to_ha(raw) = min(floor(raw * 255/64 + 0.5), 255)`, `to_domestia(ha) = clamp(floor(ha * 64/255 + 0.5), 0, 64)`. A non-zero HA brightness is sent as at least 1. A non-dimmable relay reporting `1` is normalized to 64; for dimmable relays `1` is a real level.
+- **Brightness rounding:** use `math.floor(x + 0.5)` and clamp. Never use `round()` (banker's rounding) or HA's `color_util` brightness helpers; both break the 0–64 round-trip test, and the formulas must match the Go bridge's so brightness levels carry over. `to_ha(raw) = min(floor(raw * 255/64 + 0.5), 255)`, `to_domestia(ha) = clamp(floor(ha * 64/255 + 0.5), 0, 64)`. A non-zero HA brightness is sent as at least 1. A non-dimmable relay reporting `1` is normalized to 64; for dimmable relays `1` is a real level.
 - **Logging:** `LOGGER` from `const.py`, with `%s`-style lazy arguments and a capitalized message, e.g. `LOGGER.info("Light state changed: %s is %s", name, state)`.
 
 ### HA 2026.11 specifics
@@ -66,68 +63,15 @@ These differ from older tutorials:
 
 ### Tests
 
-Pure logic (`api.py` framing and parsing, `brightness.py`, `parse_lights_json`) is tested table-style with `pytest.mark.parametrize`, without HA, following the Go convention. HA-level tests use the fixtures in `tests/conftest.py`: `mock_client` (an autospecced `DomestiaClient` patched in `__init__` and `config_flow`), `mock_config_entry` (3 light subentries: `WARDROBE` relay 1 always_on, `GARDEN` relay 2 dimmable, `HALL` relay 3 non-dimmable) and `init_integration`. Import constants with `from .conftest import ...`. `conftest.py` is shared; add fixtures to your own test file. Diagnostics use syrupy snapshots, and time-based coordinator tests use `freezer`.
+Pure logic (`api.py` framing and parsing, `brightness.py`, `parse_lights_json`) is tested table-style with `pytest.mark.parametrize`, without HA. HA-level tests use the fixtures in `tests/conftest.py`: `mock_client` (an autospecced `DomestiaClient` patched in `__init__` and `config_flow`), `mock_config_entry` (3 light subentries: `WARDROBE` relay 1 always_on, `GARDEN` relay 2 dimmable, `HALL` relay 3 non-dimmable) and `init_integration`. Import constants with `from .conftest import ...`. `conftest.py` is shared; add fixtures to your own test file. Diagnostics use syrupy snapshots, and time-based coordinator tests use `freezer`.
 
-## Legacy Go bridge (removed in Phase 5)
+## Changing setup fields
 
-### Commands
+A new or changed setup field goes in `config_flow.py`, `const.py`, `translations/en.json`, `translations/nl.json`, `translations/fr.json`, and the README. Update `diagnostics.py` redaction if the field is sensitive, and `quality_scale.yaml` if a rule's status changes.
 
-```sh
-go build -o go-domestia .                 # build
-go test ./...                             # all tests
-go test ./bridge -run TestOrphanedTopics  # single test
-go vet ./...
-gofmt -l .                                # CI fails if this prints anything
-CONFIG_PATH=domestia.json ./go-domestia   # run locally (CONFIG_PATH defaults to ./domestia.json)
-docker build --build-arg VERSION=dev -t go-domestia .
-```
+## Releasing
 
-CI (`.github/workflows/ci.yml`) runs gofmt, `go vet`, `go test`, and a multi-arch Docker build (arm64, arm/v7, amd64). The binary's version is injected with `-ldflags "-X main.version=<version>"` and reported to Home Assistant as the device `sw_version`.
-
-### Architecture
-
-Package dependencies: `main` → `bridge` → `domestia`, `config`, `homeassistant`; `domestia` → `config`; `config` → `homeassistant`.
-
-- **`main.go`**: loads config, then runs `bridge.Run` in a restart loop with a 1s backoff. `Run` returns nil only when the context is cancelled (SIGINT/SIGTERM); any error restarts it.
-- **`bridge/`**: the run loop polls the controller on a ticker, or immediately when a command arrives through `updateChannel`. The channel is buffered to 1 and written non-blocking so refreshes coalesce. State is published only when a relay's brightness changes (`relayToBrightness`).
-  - Controller errors never return from `Run`. They are retried on the next tick, and after 3 consecutive failures the lights are marked unavailable. MQTT publish errors do return, which triggers a full restart.
-  - Discovery registration and command subscriptions happen in the MQTT `OnConnectHandler` so they are redone after auto-reconnect. That handler runs on paho's goroutine: log errors there, never exit.
-  - Each poll also enforces policy: `always_on` relays are forced back to full brightness (they are never registered with HA), and a non-dimmable relay found dimmed is reset to max.
-  - On startup, `removeOrphanedConfigs` collects retained `homeassistant/light/+/config` messages for 2s and clears any that carry one of our `unique_id`s under a stale topic. This happens after a light is renamed.
-- **`domestia/`**: every request opens a fresh TCP connection (3s timeout), serialized by a mutex. Frames are `0xff 0x00 0x00 <len> <cmd...> <checksum>`, where the checksum is the byte sum of cmd. Commands: `0x3c` get state, `0x0e` on, `0x0f` off, `0x10` brightness. Commands reply `"OK"`. Get-state replies `0xff`, then two status bytes, then one byte per relay (relay number = index + 1).
-- **`homeassistant/`**: MQTT payload types and topic naming. The entity id is the light name lowercased with spaces replaced by `_`, and it forms the config, command, and state topics. One bridge-wide availability topic, `domestia/bridge/availability`, doubles as the MQTT Last Will. A graceful disconnect suppresses the will, so the bridge publishes `offline` itself on shutdown.
-- **`config/`**: JSON loading and validation. `config.Light` builds the discovery payload: `unique_id` is `d_<relay>` and the device identifier is `domestia_relay_<relay>`. Changing either breaks existing entities in users' Home Assistant installs.
-
-### Brightness
-
-The controller scale is 0–`domestia.MaxBrightness` (64; a fully-on relay reads back 64). HA uses 0–255. Conversions in `bridge/light_state.go` round rather than truncate. A non-zero HA brightness is floored to 1 so it dims instead of switching off. A non-dimmable relay reports `1` when on, and `NewLight` (`domestia/light.go`) normalizes that to max. For dimmable relays, `1` is a real dim level.
-
-### Tests
-
-There are no MQTT or controller fakes. Testable logic is extracted into pure functions (`orphanedTopics`, the brightness conversions, `NewLight`, `packCommand`, config loading) and tested table-style. Follow that pattern rather than mocking clients.
-
-### Changing configuration options
-
-A new or changed add-on option has to be updated in all of these places:
-
-- `config/configuration.go` (struct and validation)
-- `go_domestia/config.yaml` (`options` and `schema`; HA validates against `schema` and writes `/data/options.json`)
-- `go_domestia/translations/en.yaml`
-- `go_domestia/DOCS.md`
-- the README configuration table
-- `domestia.sample.json`
-
-For the integration, a new setup field or option goes in `config_flow.py`, `const.py`, `translations/en.json`, `translations/nl.json`, `translations/fr.json`, and the README integration section.
-
-### Releasing
-
-To release, bump `version` in `go_domestia/config.yaml` and add a matching `## <version>` section to `go_domestia/CHANGELOG.md`. The release workflow refuses to run without that section. Merging to `main` with a changed `config.yaml` triggers `release.yml`, which tests, pushes `ghcr.io/genzov/go-domestia-<arch>:<version>` and `:latest`, and creates a GitHub release from the changelog section. Already-tagged versions are skipped. Changelog entries are written for add-on users (behavior they will notice), not as commit summaries.
-
-The integration has no release pipeline yet; Phase 5 replaces this one with a `manifest.json` version bump.
-
-### Conventions
-
-Logging uses `log/slog` with a capitalized message and key=value attributes, e.g. `slog.Info("Light state changed", "light", name, "state", s)`.
+Run `/release`. To release by hand, bump `version` in `custom_components/domestia/manifest.json` and add a matching `## <version>` section to `CHANGELOG.md`. Pushing that to `main` triggers `release.yml`, which checks the changelog section (`.github/scripts/release-notes.sh`), runs the integration checks (it calls `integration.yml`), tags the bare version and creates a GitHub release from the section. The Marketplace offers the latest release as an update. Already-tagged versions are skipped. Versions start at 2.0.0 to stay above the add-on's 1.x tags. Changelog entries are written for users (behavior they will notice), not as commit summaries.
 
 ## Claude Code plugins
 

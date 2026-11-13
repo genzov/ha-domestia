@@ -7,7 +7,7 @@
 set -euo pipefail
 
 version=${1:?usage: release-notes.sh <version>}
-changelog="$(dirname "$0")/../../go_domestia/CHANGELOG.md"
+changelog="$(dirname "$0")/../../CHANGELOG.md"
 repo_url="${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-genzov/go-domestia}"
 
 notes=$(awk -v heading="## $version" '
@@ -32,7 +32,7 @@ notes=$(awk -v heading="## $version" '
 
 # Only the heading, or nothing at all, means there is no entry
 if [ "$(grep -c . <<< "$notes")" -le 1 ]; then
-  echo "No '## $version' section in go_domestia/CHANGELOG.md" >&2
+  echo "No '## $version' section in CHANGELOG.md" >&2
   exit 1
 fi
 

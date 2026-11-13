@@ -237,6 +237,6 @@ coverage.json
 # General
 .DS_Store
 
-# Local runtime configuration — contains real IPs and MQTT credentials.
-# Use domestia.sample.json as a template.
+# Local configuration of the removed Go bridge; contains real IPs and MQTT
+# credentials.
 domestia.json

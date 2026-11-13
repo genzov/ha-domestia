@@ -1,14 +1,20 @@
 # Changelog
 
-## 1.4.1
+Versions 2.0.0 and later are the Domestia integration. Earlier versions are the
+Domestia Bridge add-on, which it replaces.
 
-- This is the last release of the add-on. It is replaced by the Domestia
-  integration, which connects Home Assistant to the controller directly,
-  without MQTT or an add-on, and keeps your entity ids and history. Follow
+## 2.0.0
+
+- First release of the Domestia integration. It connects Home Assistant to the
+  controller directly over your local network, without MQTT, a broker or an
+  add-on, and replaces the Domestia Bridge add-on.
+- Lights are added, changed and removed in the Home Assistant UI. The `lights`
+  list from the add-on configuration can be pasted during setup.
+- Lights become unavailable after 3 failed polls, and a repair issue reports
+  configured relays that the controller does not have.
+- Coming from the add-on? Follow
   [Migrating from the add-on](https://github.com/genzov/go-domestia#migrating-from-the-add-on)
-  to switch. The add-on keeps working, but gets no further updates.
-- Updated Go to fix known security vulnerabilities in the Go standard
-  library.
+  to keep your entity ids and history.
 
 ## 1.4.0
 

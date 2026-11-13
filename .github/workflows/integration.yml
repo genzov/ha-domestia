@@ -1,12 +1,13 @@
 name: Integration
 
 # Checks the Home Assistant custom integration in custom_components/domestia.
-# The Go bridge is checked by ci.yml.
+# release.yml also calls it before publishing a release.
 
 on:
   push:
-    branches: [main, ha-integration]
+    branches: [main]
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read

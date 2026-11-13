@@ -1,19 +1,17 @@
-# go-domestia
-
-## Home Assistant integration (beta)
+# Domestia for Home Assistant
 
 The **Domestia** integration connects Home Assistant directly to a Domestia
 lighting controller over your local network. It controls each relay on the
 controller as a Home Assistant light, without an MQTT broker, a bridge or an
-add-on. It **replaces the go-domestia bridge and the Domestia Bridge add-on**
-described further down this page. See
+add-on. It replaces the go-domestia MQTT bridge and the Domestia Bridge add-on
+(versions 1.x of this repository); see
 [Migrating from the add-on](#migrating-from-the-add-on).
 
 The integration polls the controller over TCP port 52001, shows each configured
 relay as a light with its own device, and sends on, off and brightness commands
 to the controller. All communication stays on your local network.
 
-### Supported devices
+## Supported devices
 
 - Domestia **DMC-012-003**
 - Domestia **DMC-008-001**
@@ -21,7 +19,7 @@ to the controller. All communication stays on your local network.
 Other Domestia controllers that speak the same protocol on port 52001 may work,
 but they have not been tested.
 
-### Supported functions
+## Supported functions
 
 Each light that is not *always on* becomes a `light` entity, with its own
 device that is linked to a "Domestia controller" device.
@@ -45,7 +43,7 @@ uses the language of your profile and falls back to English.
 The integration adds no custom actions, triggers or conditions. Use the
 standard `light.turn_on`, `light.turn_off` and `light.toggle` actions.
 
-### Prerequisites
+## Prerequisites
 
 - Home Assistant **2026.11.0** or later.
 - The controller must have a fixed IP address (or a hostname that resolves),
@@ -53,20 +51,18 @@ standard `light.turn_on`, `light.turn_off` and `light.toggle` actions.
 - The relay number and name of every light you want to control. The controller
   does not report them.
 
-### Installation
+## Installation
 
-**Marketplace:** once a release of the integration has been published, install
-it through Home Assistant's built-in Marketplace (HACS was merged into core in
-2026.11). Adding a custom repository needs the Marketplace's GitHub connection.
+**Marketplace:** install it through Home Assistant's built-in Marketplace (HACS
+was merged into core in 2026.11). Adding a custom repository needs the Marketplace's GitHub connection.
 
 1. Open the Marketplace and add `https://github.com/genzov/go-domestia` as a
    custom repository of the **Integration** category.
 2. Install **Domestia**.
 3. Restart Home Assistant.
 
-> The releases published so far are releases of the add-on and do not contain
-> the integration. Until an integration release exists, use the manual
-> installation below.
+Updates are offered under **Settings → Updates** when a new release is
+published.
 
 **Manual installation:**
 
@@ -75,7 +71,7 @@ it through Home Assistant's built-in Marketplace (HACS was merged into core in
    example with the Samba or SSH add-on.
 2. Restart Home Assistant.
 
-### Setup
+## Setup
 
 1. Go to **Settings → Devices & services → Add integration** and search for
    **Domestia**.
@@ -125,7 +121,7 @@ it through Home Assistant's built-in Marketplace (HACS was merged into core in
    is called `Relay <number>`. Pasting the list together with its `lights:`
    line also works.
 
-### Managing lights
+## Managing lights
 
 Every light is a **light entry** (a config subentry) of the controller's
 integration entry, under **Settings → Devices & services → Domestia**.
@@ -147,7 +143,7 @@ The integration reloads after each change.
 **Change the controller's host or model:** open the integration entry's menu
 and select **Reconfigure**. The new host is tested before it is saved.
 
-### Data updates
+## Data updates
 
 The controller cannot push changes, so the integration **polls** it every 2
 seconds. Changes made at a wall panel therefore show up in Home Assistant
@@ -169,7 +165,7 @@ controller.
 - If the controller can't be reached when Home Assistant starts, setup is
   retried in the background until it can.
 
-### Use cases
+## Use cases
 
 - Control the lights wired to the Domestia controller from dashboards, voice
   assistants and the Home Assistant app.
@@ -178,7 +174,7 @@ controller.
 - Keep relays that must never go off, such as a technical room or a ventilation
   circuit, always on and out of sight.
 
-### Examples
+## Examples
 
 Turn the living room lights on at 60% at sunset, and off at midnight:
 
@@ -205,7 +201,7 @@ automation:
           entity_id: light.living_room
 ```
 
-### Known limitations
+## Known limitations
 
 - **No discovery.** The controller announces nothing on the network, and its
   network chip (Espressif) is the same one many other smart devices use, so it
@@ -223,7 +219,7 @@ automation:
   light on at the lowest level instead of switching it off.
 - **Only tested with the DMC-012-003 and DMC-008-001.**
 
-### Troubleshooting
+## Troubleshooting
 
 **"Failed to connect to the controller." during setup or reconfigure**
 
@@ -270,7 +266,7 @@ problem, and select **Disable debug logging** to download the log. When you
 report an issue, also attach the integration's **Download diagnostics** file.
 The controller's host is redacted from it.
 
-### Removal
+## Removal
 
 1. Go to **Settings → Devices & services → Domestia**, open the integration
    entry's menu and select **Delete**. This removes the controller, all lights,
@@ -280,7 +276,7 @@ The controller's host is redacted from it.
    - **Manual installation:** delete `/config/custom_components/domestia`.
 3. Restart Home Assistant.
 
-### Migrating from the add-on
+## Migrating from the add-on
 
 The integration replaces the Domestia Bridge add-on. Run one of the two, never
 both, because the controller handles one client at a time. History carries
@@ -289,8 +285,8 @@ over when the new entities get the same entity ids as the old ones.
 1. Note the entity ids of your Domestia lights, e.g. `light.garden`, and copy
    the `lights` list from the add-on's **Configuration** tab (in YAML mode).
    The import step accepts it as is; see [Setup](#setup).
-2. Install the integration with the **manual installation** above and restart
-   Home Assistant. Don't add it yet.
+2. Install the integration as described in [Installation](#installation) and
+   restart Home Assistant. Don't add it yet.
 3. Stop the **Domestia Bridge** add-on and turn off **Start on boot**. Its
    lights become unavailable.
 4. Remove the old MQTT lights so their entity ids are freed. The bridge
@@ -321,7 +317,7 @@ over when the new entities get the same entity ids as the old ones.
    3 polls, and that they recover once it is back.
 8. After a week or so without problems, uninstall the add-on.
 
-### Development
+## Development
 
 The integration is developed with [uv](https://docs.astral.sh/uv/), which also
 installs the Python version it needs.
@@ -335,230 +331,7 @@ uv run mypy                    # strict type checking
 uv run pre-commit install      # run the checks on each commit
 ```
 
----
 
-## Go bridge and add-on (legacy)
-
-The rest of this page documents the MQTT bridge and the Domestia Bridge add-on.
-They will be removed once the integration has replaced them.
-
-A bridge that connects a **Domestia** lighting controller (DMC-012-003 or DMC-008-001) to
-**Home Assistant** over MQTT. It exposes each relay on the controller as a Home
-Assistant light using [MQTT discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery),
-so your Domestia-controlled lights appear automatically in Home Assistant with
-no manual entity configuration.
-
-## What it does
-
-Domestia controllers speak a small binary protocol over TCP, which Home
-Assistant cannot talk to directly. This bridge sits between the two:
-
-- **Discovers lights automatically.** On startup it publishes a retained MQTT
-  discovery config for each configured relay, so Home Assistant creates the
-  light entities by itself. Each light is registered as its own Home Assistant
-  device, named after the light.
-- **Reflects controller state.** It polls the controller on a fixed interval
-  and publishes on/off state and brightness to MQTT, but only when something
-  actually changes.
-- **Accepts commands.** It subscribes to each light's command topic and
-  translates Home Assistant on/off/brightness commands into Domestia controller
-  commands.
-- **Supports dimmable and non-dimmable relays.** Brightness is converted
-  between Home Assistant's `0–255` scale and the controller's `0–64` scale, with
-  proper rounding so low brightness values dim the light instead of switching it
-  off. Non-dimmable relays are forced to full brightness.
-- **Supports always-on relays.** Relays marked `always_on` are kept on at full
-  brightness and hidden from Home Assistant.
-- **Reports availability.** Lights are marked *available* once the bridge is
-  connected and registered, and *unavailable* on a clean shutdown or if the
-  bridge dies unexpectedly (via the MQTT Last Will & Testament).
-
-## How it works
-
-```
-┌──────────────┐      TCP (port 52001)      ┌──────────────┐      MQTT      ┌────────────────┐
-│   Domestia   │ <────────────────────────> │  go-domestia │ <────────────> │ Home Assistant │
-│  controller  │   binary relay protocol    │    bridge    │  discovery +   │   (+ broker)   │
-└──────────────┘                            └──────────────┘  state/command └────────────────┘
-```
-
-- **State (controller → HA):** every `refresh_frequency` milliseconds the bridge
-  sends a get-state command (`0x3c`), parses one byte per relay, and publishes
-  any changes to each light's `domestia/light/<entity>/state` topic.
-- **Commands (HA → controller):** the bridge subscribes to
-  `domestia/light/<entity>/set`; incoming JSON commands are turned into
-  turn-on (`0x0e`), turn-off (`0x0f`) or set-brightness (`0x10`) commands.
-- **Availability:** published retained to `domestia/bridge/availability`
-  (`online` / `offline`), also used as the MQTT Last Will.
-
-## Tech stack
-
-- **Go** (see `go.mod` for the exact version)
-- [`eclipse/paho.mqtt.golang`](https://github.com/eclipse/paho.mqtt.golang) — MQTT client
-- **Docker** (`aarch64`, `armv7`, `amd64`) for distribution
-- Packaged as a **Home Assistant add-on** (`config.yaml`)
-
-You will also need:
-
-- A Domestia controller reachable over TCP on port **52001**
-- An **MQTT broker** (e.g. the [Mosquitto](https://github.com/home-assistant/addons/tree/master/mosquitto)
-  add-on) that Home Assistant is connected to
-
-## Configuration
-
-The bridge reads a single JSON file. Its path defaults to `domestia.json` and
-can be overridden with the `CONFIG_PATH` environment variable (the Docker image
-sets it to `/data/options.json`, which is where the Home Assistant add-on writes
-its options).
-
-Copy [`domestia.sample.json`](domestia.sample.json) to `domestia.json` and edit it:
-
-```json
-{
-  "ip_address": "192.168.1.2",
-  "model": "DMC-012-003",
-  "refresh_frequency": 2000,
-  "mqtt": {
-    "ip_address": "192.168.1.1",
-    "username": "username",
-    "password": "password"
-  },
-  "lights": [
-    { "name": "Garden", "relay": 2, "dimmable": false },
-    { "name": "Living room", "relay": 13, "dimmable": true },
-    { "name": "Wardrobe", "relay": 1, "always_on": true }
-  ]
-}
-```
-
-| Field               | Type     | Required | Description                                                            |
-| ------------------- | -------- | -------- | ---------------------------------------------------------------------- |
-| `ip_address`        | string   | yes      | IP address of the Domestia controller.                                 |
-| `model`             | string   | no       | Controller model, `DMC-012-003` or `DMC-008-001`. Shown on HA devices. |
-| `refresh_frequency` | int (ms) | no       | Controller poll interval. Defaults to `2000`. Minimum `250`.           |
-| `mqtt.ip_address`   | string   | yes      | Hostname/IP of the MQTT broker (port `1883`).                          |
-| `mqtt.username`     | string   | no       | MQTT username.                                                         |
-| `mqtt.password`     | string   | no       | MQTT password.                                                         |
-| `lights[].name`     | string   | yes      | Display name in Home Assistant.                                        |
-| `lights[].relay`    | int      | yes      | Relay number on the controller.                                        |
-| `lights[].dimmable` | bool     | no       | `true` if the relay supports brightness. Defaults to `false`.          |
-| `lights[].always_on`| bool     | no       | Keep the relay forced on at full brightness and hide it from HA.       |
-
-> **Note:** `domestia.json` contains real credentials and is git-ignored. Do not
-> commit it.
-## Building the Docker image
-
-The included [`Dockerfile`](Dockerfile) is a multi-stage, multi-arch build that
-produces a tiny `scratch`-based image containing only the static binary.
-
-### Single architecture (your current platform)
-
-```sh
-docker build --build-arg VERSION=<version> -t go-domestia .
-```
-
-The optional `VERSION` build argument is reported to Home Assistant as the
-device's software version.
-
-### Multi-architecture (using Buildx)
-
-The build honours the `TARGETARCH` / `TARGETVARIANT` arguments that Buildx sets,
-so it cross-compiles for any platform without emulation. Home Assistant pulls a
-separate image per add-on architecture, named `go-domestia-<arch>`:
-
-| Add-on arch | Buildx platform |
-| ----------- | --------------- |
-| `aarch64`   | `linux/arm64`   |
-| `armv7`     | `linux/arm/v7`  |
-| `amd64`     | `linux/amd64`   |
-
-```sh
-docker buildx build \
-  --platform linux/arm/v7 \
-  --build-arg VERSION=<version> \
-  -t ghcr.io/genzov/go-domestia-armv7:<version> \
-  --push .
-```
-
-## CI and releases
-
-[`ci.yml`](.github/workflows/ci.yml) checks formatting, runs `go vet` and the
-tests, and builds the Docker image on every push to `main` and every pull
-request.
-
-Releases are published by [`release.yml`](.github/workflows/release.yml). To
-release:
-
-1. Add a `## <version>` section to [`CHANGELOG.md`](go_domestia/CHANGELOG.md).
-2. Bump `version` in [`config.yaml`](go_domestia/config.yaml).
-3. Merge to `main`.
-
-The workflow runs the tests, pushes `ghcr.io/genzov/go-domestia-<arch>:<version>`
-and `:latest` for each architecture, and publishes a GitHub release tagged
-`<version>` with the changelog section as its notes
-([`release-notes.sh`](.github/scripts/release-notes.sh)). Versions that are already tagged are skipped, and
-a failed release can be rerun from the **Actions** tab.
-
-Home Assistant reads the add-on version from `main`, so it can offer the update
-a few minutes before the image has been pushed.
-
-## Running
-
-### As a standalone Docker container
-
-The image sets `CONFIG_PATH=/data/options.json`, so mount your configuration
-there:
-
-```sh
-docker run --rm \
-  -v "$(pwd)/domestia.json:/data/options.json:ro" \
-  go-domestia
-```
-
-Or override `CONFIG_PATH` to mount it elsewhere:
-
-```sh
-docker run --rm \
-  -e CONFIG_PATH=/config/domestia.json \
-  -v "$(pwd)/domestia.json:/config/domestia.json:ro" \
-  go-domestia
-```
-
-### Running locally without Docker
-
-```sh
-go build -o go-domestia .
-./go-domestia                 # reads ./domestia.json
-# or
-CONFIG_PATH=/path/to/config.json ./go-domestia
-```
-
-The bridge logs each registered light, every state change, and any controller
-or MQTT errors. It shuts down cleanly on `SIGINT`/`SIGTERM`, marking all lights
-unavailable in Home Assistant before exiting.
-
-### As a Home Assistant add-on
-
-This repository is also a Home Assistant add-on repository. [`go_domestia/config.yaml`](go_domestia/config.yaml) is
-the add-on manifest; Home Assistant renders its options in the UI, validates
-them against the `schema:` block, and writes the result to `/data/options.json`
-(which the image reads via `CONFIG_PATH`).
-
-1. Add this repository to **Settings → Add-ons → Add-on Store → ⋮ →
-   Repositories**.
-2. Install the **Domestia Bridge** add-on.
-3. Configure it in the add-on **Configuration** tab — see
-   [`DOCS.md`](go_domestia/DOCS.md) for the available options and a worked-out
-   example.
-4. Start the add-on. Your lights appear automatically in Home Assistant.
-
-## Project layout
-
-| Path             | Responsibility                                                        |
-| ---------------- | --------------------------------------------------------------------- |
-| `main.go`        | Entry point: loads config, runs the bridge, handles signals/restarts. |
-| `bridge/`        | Core bridge loop: MQTT wiring, polling, command handling.             |
-| `domestia/`      | Domestia controller TCP client and protocol encoding.                 |
-| `homeassistant/` | Home Assistant MQTT discovery and state/command payload types.        |
-| `config/`        | Configuration loading and validation.                                 |
-| `.github/`       | CI and release workflows.                                             |
+Releases are published from GitHub when the `version` in
+`custom_components/domestia/manifest.json` changes on `main`; see
+[CHANGELOG.md](CHANGELOG.md).

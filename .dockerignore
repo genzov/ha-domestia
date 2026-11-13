@@ -1,8 +1,0 @@
-# Keep local configuration (real IPs and MQTT credentials) and repository
-# metadata out of the build context
-domestia.json
-.git
-.github
-.claude
-.env
-*.md
