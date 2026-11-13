@@ -274,3 +274,25 @@ async def test_relay_not_reported_issue(
 
     assert issue_registry.async_get_issue(DOMAIN, ISSUE_ID) is None
     assert hass.states.get("light.garden").state == STATE_ON
+
+
+async def test_relay_not_reported_issue_at_setup(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_client: AsyncMock,
+    issue_registry: ir.IssueRegistry,
+) -> None:
+    """The issue raised by the first poll survives setup, and goes with the entry."""
+    mock_client.get_state.return_value = {1: 64}
+
+    await _setup(hass, mock_config_entry)
+
+    assert mock_config_entry.state is ConfigEntryState.LOADED
+    issue = issue_registry.async_get_issue(DOMAIN, ISSUE_ID)
+    assert issue is not None
+    assert issue.translation_placeholders == {"host": HOST, "relays": "2, 3"}
+
+    await hass.config_entries.async_remove(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert issue_registry.async_get_issue(DOMAIN, ISSUE_ID) is None
