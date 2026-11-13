@@ -184,3 +184,29 @@ def test_issues_translated() -> None:
     for key, placeholders in calls:
         issue = TRANSLATIONS["issues"][key]
         assert _fields(issue["title"], issue["description"]) == placeholders, key
+
+
+def _leaves(node: Any, path: str = "") -> dict[str, str]:
+    if isinstance(node, dict):
+        return {
+            leaf: text
+            for key, child in node.items()
+            for leaf, text in _leaves(child, f"{path}.{key}" if path else key).items()
+        }
+    return {path: node}
+
+
+@pytest.mark.parametrize("language", ["nl", "fr"])
+def test_language_matches_english(language: str) -> None:
+    """Every language has exactly the English keys and placeholders."""
+    translated = _leaves(
+        json.loads(
+            (
+                Path(config_flow.__file__).parent / "translations" / f"{language}.json"
+            ).read_text(encoding="utf-8")
+        )
+    )
+    english = _leaves(TRANSLATIONS)
+    assert translated.keys() == english.keys()
+    for key, text in english.items():
+        assert _fields(translated[key]) == _fields(text), key

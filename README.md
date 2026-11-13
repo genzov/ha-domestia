@@ -39,6 +39,9 @@ brightness. If one fails, the integration still sends the other and then reports
 the failure, so the light may end up on even though the action reports
 "Failed to control …".
 
+The user interface is available in English, Dutch and French. Home Assistant
+uses the language of your profile and falls back to English.
+
 The integration adds no custom actions, triggers or conditions. Use the
 standard `light.turn_on`, `light.turn_off` and `light.toggle` actions.
 

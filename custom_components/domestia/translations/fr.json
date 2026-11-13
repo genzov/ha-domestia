@@ -1,0 +1,111 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connexion à votre contrôleur Domestia",
+        "data": {
+          "host": "Hôte",
+          "model": "Modèle"
+        },
+        "data_description": {
+          "host": "Adresse IP ou nom d'hôte du contrôleur. Il doit être joignable sur le port TCP 52001.",
+          "model": "Modèle du contrôleur, affiché sur les appareils. Facultatif."
+        }
+      },
+      "lights": {
+        "title": "Importer les lumières",
+        "description": "Collez éventuellement la liste `lights` de la configuration du module complémentaire Domestia Bridge. Laissez vide pour ajouter des lumières plus tard.",
+        "data": {
+          "lights": "Lumières"
+        },
+        "data_description": {
+          "lights": "La liste `lights` au format YAML, copiée depuis l'onglet Configuration du module complémentaire en mode YAML, ou sous forme de tableau JSON. Chaque lumière a `name`, `relay` et les champs facultatifs `dimmable` et `always_on`."
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigurer votre contrôleur Domestia",
+        "data": {
+          "host": "Hôte",
+          "model": "Modèle"
+        },
+        "data_description": {
+          "host": "Adresse IP ou nom d'hôte du contrôleur. Il doit être joignable sur le port TCP 52001.",
+          "model": "Modèle du contrôleur, affiché sur les appareils. Facultatif."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Impossible de se connecter au contrôleur.",
+      "invalid_lights_json": "Les lumières doivent être une liste de lumières en YAML ou en JSON.",
+      "invalid_relay": "Chaque lumière nécessite un numéro de relais compris entre 1 et 255.",
+      "duplicate_relay": "Deux lumières utilisent le même relais.",
+      "name_required": "Chaque lumière qui n'est pas toujours allumée doit avoir un nom."
+    },
+    "abort": {
+      "already_configured": "Ce contrôleur est déjà configuré.",
+      "reconfigure_successful": "Le contrôleur a été reconfiguré."
+    }
+  },
+  "config_subentries": {
+    "light": {
+      "entry_type": "Lumière",
+      "initiate_flow": {
+        "user": "Ajouter une lumière"
+      },
+      "step": {
+        "user": {
+          "title": "Ajouter une lumière",
+          "data": {
+            "name": "Nom",
+            "relay": "Relais",
+            "dimmable": "Variable",
+            "always_on": "Toujours allumée"
+          },
+          "data_description": {
+            "name": "Nom de la lumière. Obligatoire sauf si la lumière est toujours allumée.",
+            "relay": "Numéro du relais sur le contrôleur, de 1 à 255.",
+            "dimmable": "Indique si le relais peut faire varier l'intensité de la lumière.",
+            "always_on": "Maintient le relais allumé à pleine luminosité et le masque dans Home Assistant."
+          }
+        },
+        "reconfigure": {
+          "title": "Reconfigurer la lumière",
+          "data": {
+            "name": "Nom",
+            "relay": "Relais",
+            "dimmable": "Variable",
+            "always_on": "Toujours allumée"
+          },
+          "data_description": {
+            "name": "Nom de la lumière. Obligatoire sauf si la lumière est toujours allumée.",
+            "relay": "Numéro du relais sur le contrôleur, de 1 à 255.",
+            "dimmable": "Indique si le relais peut faire varier l'intensité de la lumière.",
+            "always_on": "Maintient le relais allumé à pleine luminosité et le masque dans Home Assistant."
+          }
+        }
+      },
+      "error": {
+        "invalid_relay": "Le relais doit être un nombre entier compris entre 1 et 255.",
+        "name_required": "Une lumière qui n'est pas toujours allumée doit avoir un nom."
+      },
+      "abort": {
+        "already_configured": "Ce relais a déjà une lumière.",
+        "reconfigure_successful": "La lumière a été reconfigurée."
+      }
+    }
+  },
+  "exceptions": {
+    "cannot_connect": {
+      "message": "Impossible de joindre le contrôleur Domestia : {error}"
+    },
+    "command_failed": {
+      "message": "Échec du contrôle de {name} : {error}"
+    }
+  },
+  "issues": {
+    "relay_not_reported": {
+      "title": "Relais configurés absents du contrôleur",
+      "description": "Le contrôleur à l'adresse {host} n'a pas signalé les relais {relays}. Il a probablement moins de relais que configuré. Corrigez ou supprimez ces lumières dans l'intégration Domestia."
+    }
+  }
+}

@@ -118,7 +118,7 @@ custom_components/domestia/
   diagnostics.py     async_get_config_entry_diagnostics (redact host)
   manifest.json      domain, name, version, codeowners ["@genzov"], config_flow true, integration_type "hub", iot_class "local_polling", requirements [], documentation, issue_tracker
   quality_scale.yaml every rule: done / todo / exempt + comment
-  translations/en.json   the single source of strings (config, options, config_subentries, exceptions, issues)
+  translations/en.json   the single source of strings (config, options, config_subentries, exceptions, issues); nl.json and fr.json are translations of it
   brand/icon.png, brand/logo.png   copied from go_domestia/
 tests/
   __init__.py

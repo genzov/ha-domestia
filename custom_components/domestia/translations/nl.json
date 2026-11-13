@@ -1,0 +1,111 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Verbind met je Domestia-controller",
+        "data": {
+          "host": "Host",
+          "model": "Model"
+        },
+        "data_description": {
+          "host": "IP-adres of hostnaam van de controller. Deze moet bereikbaar zijn op TCP-poort 52001.",
+          "model": "Controllermodel, weergegeven op de apparaten. Optioneel."
+        }
+      },
+      "lights": {
+        "title": "Lampen importeren",
+        "description": "Plak optioneel de lijst `lights` uit de configuratie van de Domestia Bridge-add-on. Laat leeg om later lampen toe te voegen.",
+        "data": {
+          "lights": "Lampen"
+        },
+        "data_description": {
+          "lights": "De lijst `lights` als YAML, gekopieerd van het tabblad Configuratie van de add-on in YAML-modus, of als JSON-array. Elke lamp heeft `name`, `relay` en de optionele `dimmable` en `always_on`."
+        }
+      },
+      "reconfigure": {
+        "title": "Je Domestia-controller opnieuw configureren",
+        "data": {
+          "host": "Host",
+          "model": "Model"
+        },
+        "data_description": {
+          "host": "IP-adres of hostnaam van de controller. Deze moet bereikbaar zijn op TCP-poort 52001.",
+          "model": "Controllermodel, weergegeven op de apparaten. Optioneel."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbinden met de controller is mislukt.",
+      "invalid_lights_json": "De lampen moeten een lijst met lampen in YAML of JSON zijn.",
+      "invalid_relay": "Elke lamp heeft een relaisnummer tussen 1 en 255 nodig.",
+      "duplicate_relay": "Twee lampen gebruiken hetzelfde relais.",
+      "name_required": "Elke lamp die niet altijd aan staat heeft een naam nodig."
+    },
+    "abort": {
+      "already_configured": "Deze controller is al geconfigureerd.",
+      "reconfigure_successful": "De controller is opnieuw geconfigureerd."
+    }
+  },
+  "config_subentries": {
+    "light": {
+      "entry_type": "Lamp",
+      "initiate_flow": {
+        "user": "Lamp toevoegen"
+      },
+      "step": {
+        "user": {
+          "title": "Een lamp toevoegen",
+          "data": {
+            "name": "Naam",
+            "relay": "Relais",
+            "dimmable": "Dimbaar",
+            "always_on": "Altijd aan"
+          },
+          "data_description": {
+            "name": "Naam van de lamp. Verplicht, tenzij de lamp altijd aan staat.",
+            "relay": "Relaisnummer op de controller, van 1 tot 255.",
+            "dimmable": "Of het relais de lamp kan dimmen.",
+            "always_on": "Houd het relais op volle helderheid aan en verberg het in Home Assistant."
+          }
+        },
+        "reconfigure": {
+          "title": "Lamp opnieuw configureren",
+          "data": {
+            "name": "Naam",
+            "relay": "Relais",
+            "dimmable": "Dimbaar",
+            "always_on": "Altijd aan"
+          },
+          "data_description": {
+            "name": "Naam van de lamp. Verplicht, tenzij de lamp altijd aan staat.",
+            "relay": "Relaisnummer op de controller, van 1 tot 255.",
+            "dimmable": "Of het relais de lamp kan dimmen.",
+            "always_on": "Houd het relais op volle helderheid aan en verberg het in Home Assistant."
+          }
+        }
+      },
+      "error": {
+        "invalid_relay": "Het relais moet een geheel getal tussen 1 en 255 zijn.",
+        "name_required": "Een lamp die niet altijd aan staat heeft een naam nodig."
+      },
+      "abort": {
+        "already_configured": "Dit relais heeft al een lamp.",
+        "reconfigure_successful": "De lamp is opnieuw geconfigureerd."
+      }
+    }
+  },
+  "exceptions": {
+    "cannot_connect": {
+      "message": "Kan de Domestia-controller niet bereiken: {error}"
+    },
+    "command_failed": {
+      "message": "Bedienen van {name} is mislukt: {error}"
+    }
+  },
+  "issues": {
+    "relay_not_reported": {
+      "title": "Geconfigureerde relais ontbreken op de controller",
+      "description": "De controller op {host} heeft de relais {relays} niet gemeld. Waarschijnlijk heeft hij minder relais dan geconfigureerd. Corrigeer of verwijder deze lampen in de Domestia-integratie."
+    }
+  }
+}

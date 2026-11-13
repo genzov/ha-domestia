@@ -40,7 +40,7 @@ CI (`.github/workflows/integration.yml`) runs ruff, mypy and pytest with at leas
 - **`config_flow.py`**: the user step (host, model, connection test with `get_state(1)`), the optional `lights` import step (`parse_lights_json`, which takes the add-on's YAML list, indented or under `lights:`, or a JSON array), reconfigure and `LightSubentryFlow` (user, reconfigure).
 - **`__init__.py`**: registers the controller device first, then creates the coordinator, runs the first refresh, sets `entry.runtime_data`, adds the update listener, and forwards to `Platform.LIGHT`. `async_remove_config_entry_device` allows removing devices whose subentry is gone.
 - **`diagnostics.py`**: entry data with the host redacted, options, lights, coordinator data and failure count.
-- **`translations/en.json`**: the only strings file (custom integrations have no `strings.json`). **`brand/`**: local icon and logo. **`quality_scale.yaml`**: the self-assessed status of every quality-scale rule; keep it in step with the code.
+- **`translations/`**: `en.json` is the source strings file (custom integrations have no `strings.json`); `nl.json` and `fr.json` mirror its keys and placeholders exactly, and `tests/test_translations.py` fails when they drift. **`brand/`**: local icon and logo. **`quality_scale.yaml`**: the self-assessed status of every quality-scale rule; keep it in step with the code.
 
 Data model: one config entry per controller (`unique_id = host`, `data = {host, model}`), and one subentry of type `"light"` per relay (`title` = name, or `Relay <n>` for a nameless always-on light, `unique_id = str(relay)`, `data = {relay, dimmable, always_on}`).
 
@@ -117,7 +117,7 @@ A new or changed add-on option has to be updated in all of these places:
 - the README configuration table
 - `domestia.sample.json`
 
-For the integration, a new setup field or option goes in `config_flow.py`, `const.py`, `translations/en.json`, and the README integration section.
+For the integration, a new setup field or option goes in `config_flow.py`, `const.py`, `translations/en.json`, `translations/nl.json`, `translations/fr.json`, and the README integration section.
 
 ### Releasing
 
