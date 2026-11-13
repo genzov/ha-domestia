@@ -49,6 +49,7 @@
   "options": {
     "step": {
       "init": {
+        "title": "Domestia options",
         "data": {
           "scan_interval": "Polling interval"
         },
@@ -97,6 +98,7 @@
         }
       },
       "error": {
+        "invalid_relay": "The relay must be a whole number between 1 and 255.",
         "name_required": "A light that is not always on needs a name."
       },
       "abort": {
