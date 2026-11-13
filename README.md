@@ -30,9 +30,14 @@ device that is linked to a "Domestia controller" device.
 - **Non-dimmable relays:** on and off. They always run at full brightness. If
   one is found dimmed, for example after a wall panel dimmed it, the integration
   sets it back to full brightness.
-- **Always-on relays:** these get no entity, so they are hidden from Home
-  Assistant. On every poll the integration switches them back on at full
+- **Always-on relays:** these get no entity or device, so they are hidden from
+  Home Assistant. On every poll the integration switches them back on at full
   brightness if something turned them off or dimmed them.
+
+Turning a light on can take two commands: on, then full or the requested
+brightness. If one fails, the integration still sends the other and then reports
+the failure, so the light may end up on even though the action reports
+"Failed to control …".
 
 The integration adds no custom actions, triggers or conditions. Use the
 standard `light.turn_on`, `light.turn_off` and `light.toggle` actions.
@@ -80,7 +85,7 @@ it through Home Assistant's built-in Marketplace (HACS was merged into core in
 
    The integration connects to the controller before it continues. If it can't,
    the form shows "Failed to connect to the controller." and you can correct the
-   host and try again. Each controller can be added only once.
+   host and try again. Each controller can be added only once per IP address or hostname.
 3. On **Import lights**, you can paste your lights into **Lights**, or leave it
    empty and add lights one by one later. This is the `lights` list from the
    Domestia Bridge add-on's **Configuration** tab, copied in YAML mode:
@@ -109,9 +114,13 @@ it through Home Assistant's built-in Marketplace (HACS was merged into core in
    Invalid input is reported on the form: "The lights must be a list of lights
    in YAML or JSON.", "Every light needs a relay number between 1 and 255.", "Two lights
    use the same relay." or "Every light that is not always on needs a name."
-4. Submit. Each light becomes a light entry under the controller, with its own
-   device and entity. The entity id is `light.<name>`, lowercased with spaces
-   replaced by `_`, e.g. `light.living_room`.
+4. Submit. Each light becomes a light entry under the controller. Lights that
+   are not always on also get their own device and entity. The entity id is
+   `light.<name>` with the name turned into an id the usual Home Assistant way,
+   e.g. `Living room` becomes `light.living_room`. If that id is already taken,
+   Home Assistant adds a suffix such as `_2`. An always-on light without a name
+   is called `Relay <number>`. Pasting the list together with its `lights:`
+   line also works.
 
 ### Managing lights
 
@@ -124,7 +133,9 @@ integration entry, under **Settings → Devices & services → Domestia**.
   has a light."
 - **Edit a light:** open the light entry's menu and select **Reconfigure**. You
   can rename it, move it to another relay, or change dimmable and always on.
-  The entity, device and history are kept, even when the relay changes.
+  The entity, device and history are kept, even when the relay changes. Turning
+  on **Always on** is the exception: the light's entity and device are removed,
+  because always-on lights are hidden.
 - **Remove a light:** open the light entry's menu and select **Delete**. Its
   device and entity are removed.
 
@@ -147,13 +158,13 @@ The controller cannot push changes, so the integration **polls** it, every 2
 seconds by default (see [Options](#options)). Changes made at a wall panel
 therefore show up in Home Assistant within one polling interval.
 
-- After every command from Home Assistant, the integration polls again right
-  away, so the new state shows without waiting for the next poll. Commands that
-  arrive close together share one refresh.
+- After a command from Home Assistant, the integration polls again right away,
+  so the new state shows without waiting for the next poll. Further commands
+  within 0.3 seconds share one extra poll after that.
 - A single failed poll does not make the lights unavailable. They keep their
   last known state, and only after **3 failed polls in a row** do they become
   unavailable. They recover on the next successful poll. This is logged once
-  when it happens and once when it recovers.
+  when it happens (as an error) and once when it recovers.
 - If the controller can't be reached when Home Assistant starts, setup is
   retried in the background until it can.
 

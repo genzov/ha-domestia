@@ -89,8 +89,8 @@ rules:
   dynamic-devices:
     status: exempt
     comment: |
-      The controller does not report which relays exist. Devices come only from
-      light subentries the user adds, which apply on reload.
+      The controller exposes no device list, so no device can appear on its
+      side after setup. Lights exist only as subentries the user creates.
   entity-category:
     status: exempt
     comment: The integration only creates primary light entities.
@@ -106,7 +106,7 @@ rules:
   exception-translations: done
   icon-translations:
     status: exempt
-    comment: The lights use the default light icons.
+    comment: Entities use the light domain's icons and set none of their own.
   reconfiguration-flow: done
   repair-issues:
     status: done

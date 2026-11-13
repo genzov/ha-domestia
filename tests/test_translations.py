@@ -8,6 +8,7 @@ otherwise only show up in the UI.
 import ast
 import inspect
 import json
+import string
 from pathlib import Path
 from typing import Any
 
@@ -125,3 +126,63 @@ def test_subentry_errors_and_aborts_translated() -> None:
     assert errors
     assert errors <= set(SUBENTRY["error"])
     assert aborts <= set(SUBENTRY["abort"])
+
+
+def _translated_calls(section: str) -> list[tuple[str, set[str]]]:
+    """Return (translation key, placeholder names) of calls into a section.
+
+    Exceptions are raised with translation_key=...; repair issues are created
+    with async_create_issue(..., translation_key=...).
+    """
+    found = []
+    for path in Path(config_flow.__file__).parent.glob("*.py"):
+        for call in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if not isinstance(call, ast.Call):
+                continue
+            func = call.func
+            name = (
+                func.attr
+                if isinstance(func, ast.Attribute)
+                else getattr(func, "id", "")
+            )
+            if (name == "async_create_issue") != (section == "issues"):
+                continue
+            keywords = {kw.arg: kw.value for kw in call.keywords}
+            key = keywords.get("translation_key")
+            if not isinstance(key, ast.Constant):
+                continue
+            placeholders = keywords.get("translation_placeholders")
+            names = (
+                {k.value for k in placeholders.keys if isinstance(k, ast.Constant)}
+                if isinstance(placeholders, ast.Dict)
+                else set()
+            )
+            found.append((key.value, names))
+    return found
+
+
+def _fields(*texts: str) -> set[str]:
+    return {
+        field
+        for text in texts
+        for _, field, _, _ in string.Formatter().parse(text)
+        if field
+    }
+
+
+def test_exceptions_translated() -> None:
+    """Every translated exception exists, with exactly its placeholders."""
+    calls = _translated_calls("exceptions")
+    assert {key for key, _ in calls} == {"cannot_connect", "command_failed"}
+    for key, placeholders in calls:
+        message = TRANSLATIONS["exceptions"][key]["message"]
+        assert _fields(message) == placeholders, key
+
+
+def test_issues_translated() -> None:
+    """Every repair issue exists, with exactly its placeholders."""
+    calls = _translated_calls("issues")
+    assert {key for key, _ in calls} == {"relay_not_reported"}
+    for key, placeholders in calls:
+        issue = TRANSLATIONS["issues"][key]
+        assert _fields(issue["title"], issue["description"]) == placeholders, key

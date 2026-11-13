@@ -173,7 +173,8 @@ class DomestiaClient:
 
             try:
                 writer.write(pack_command(command))
-                await writer.drain()
+                # TimeoutError is an OSError, so a stuck write is mapped below.
+                await asyncio.wait_for(writer.drain(), REQUEST_TIMEOUT)
                 return await read_response(reader, min_length)
             except OSError as err:
                 raise DomestiaConnectionError(str(err)) from err

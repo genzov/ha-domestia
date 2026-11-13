@@ -2,6 +2,7 @@
 # name: test_diagnostics
   dict({
     'coordinator': dict({
+      'consecutive_failures': 0,
       'data': dict({
         '1': 64,
         '2': 32,

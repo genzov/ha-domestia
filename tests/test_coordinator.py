@@ -93,6 +93,29 @@ async def test_three_strike_availability(
     assert hass.states.get("light.garden").state == STATE_ON
 
 
+async def test_unavailable_logged_once(
+    hass: HomeAssistant,
+    init_integration: MockConfigEntry,
+    mock_client: AsyncMock,
+    freezer: FrozenDateTimeFactory,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Losing the controller is logged once, and so is the recovery."""
+    del init_integration
+    mock_client.get_state.side_effect = DomestiaConnectionError("timed out")
+    for _ in range(MAX_CONSECUTIVE_FAILURES + 2):
+        await _poll(hass, freezer)
+
+    mock_client.get_state.side_effect = None
+    for _ in range(2):
+        await _poll(hass, freezer)
+
+    errors = [r for r in caplog.records if r.levelname == "ERROR"]
+    assert len(errors) == 1
+    assert "Cannot reach the Domestia controller: timed out" in errors[0].getMessage()
+    assert sum("recovered" in r.getMessage() for r in caplog.records) == 1
+
+
 async def test_failure_count_resets_on_success(
     hass: HomeAssistant,
     init_integration: MockConfigEntry,

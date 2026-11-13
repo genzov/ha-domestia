@@ -97,7 +97,7 @@ The entity_id becomes `light.<slugified light name>`. That matches the Go entity
    - The 3 s timeout covers connect and the first reply bytes.
    - After the first bytes, each further read waits at most 250 ms.
    - EOF or timeout with partial data returns that partial data; with no data it is an error.
-   - The read buffer is capped at 256 bytes.
+   - The read buffer is capped at 258 bytes (header plus relay 255).
    - Get-state `min_length = 3 + highest configured relay`, including `always_on` relays.
 9. **Short state reply (new, Gold `repair-issues`):** if configured relays are missing from a valid reply (the controller has fewer relays than configured), create repair issue `relay_not_reported` with the missing relays listed, and delete it once they reappear. Go silently skipped them. Entities for missing relays become unavailable through `available`.
 
