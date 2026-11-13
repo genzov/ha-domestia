@@ -13,7 +13,7 @@ Domestia Bridge add-on, which it replaces.
 - Lights become unavailable after 3 failed polls, and a repair issue reports
   configured relays that the controller does not have.
 - Coming from the add-on? Follow
-  [Migrating from the add-on](https://github.com/genzov/go-domestia#migrating-from-the-add-on)
+  [Migrating from the add-on](https://github.com/genzov/ha-domestia#migrating-from-the-add-on)
   to keep your entity ids and history.
 
 ## 1.4.0

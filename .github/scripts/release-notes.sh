@@ -8,7 +8,7 @@ set -euo pipefail
 
 version=${1:?usage: release-notes.sh <version>}
 changelog="$(dirname "$0")/../../CHANGELOG.md"
-repo_url="${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-genzov/go-domestia}"
+repo_url="${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-genzov/ha-domestia}"
 
 notes=$(awk -v heading="## $version" '
   function flush() {

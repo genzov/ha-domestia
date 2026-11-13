@@ -56,7 +56,7 @@ standard `light.turn_on`, `light.turn_off` and `light.toggle` actions.
 **Marketplace:** install it through Home Assistant's built-in Marketplace (HACS
 was merged into core in 2026.11). Adding a custom repository needs the Marketplace's GitHub connection.
 
-1. Open the Marketplace and add `https://github.com/genzov/go-domestia` as a
+1. Open the Marketplace and add `https://github.com/genzov/ha-domestia` as a
    custom repository of the **Integration** category.
 2. Install **Domestia**.
 3. Restart Home Assistant.
