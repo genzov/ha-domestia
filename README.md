@@ -207,8 +207,10 @@ automation:
 
 ### Known limitations
 
-- **No discovery.** The controller is not discovered on the network. Enter its
-  host by hand.
+- **No discovery.** The controller announces nothing on the network, and its
+  network chip (Espressif) is the same one many other smart devices use, so it
+  cannot be told apart. Enter its host by hand, and give it a DHCP reservation
+  in your router. If its address changes anyway, use **Reconfigure**.
 - **The controller reports no names.** It only reports a brightness per relay,
   so every light has to be configured by hand, or imported from the add-on
   configuration.

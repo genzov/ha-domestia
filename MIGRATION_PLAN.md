@@ -550,7 +550,7 @@ The Go convention "no fakes, pure functions" still applies to `api.py` and `brig
 |---|---|
 | devices | done |
 | diagnostics | done |
-| discovery, discovery-update-info | **todo: verify on hardware.** Check the controller's MAC OUI and DHCP hostname in the router. If they are stable, add a `dhcp` matcher to `manifest.json` with `async_step_dhcp` (which also gives discovery-update-info by updating the host). Otherwise mark exempt. |
+| discovery, discovery-update-info | **exempt** (checked on hardware, 2026-11-13). The controller sends no DHCP hostname, and its MAC OUI `8C:CE:4E` is Espressif's, shared by ESPHome, Tasmota and Shelly devices, so a `dhcp` matcher would match unrelated devices. Reconfigure covers a changed host. |
 | docs-data-update, docs-examples, docs-known-limitations, docs-supported-devices, docs-supported-functions, docs-troubleshooting, docs-use-cases | done (WP-E) |
 | dynamic-devices | exempt: the controller doesn't report which relays exist. Devices come only from user-added subentries, which apply on reload. |
 | entity-category, entity-device-class, entity-disabled-by-default | exempt: only primary light entities, and lights have no device class |

@@ -73,15 +73,16 @@ rules:
   devices: done
   diagnostics: done
   discovery:
-    status: todo
+    status: exempt
     comment: |
-      Verify on hardware. If the controller's MAC OUI and DHCP hostname are
-      stable, add a dhcp matcher with async_step_dhcp. Otherwise mark exempt.
+      The controller announces nothing (no mDNS, SSDP or DHCP hostname), and
+      its MAC address has a generic Espressif OUI shared by ESPHome, Tasmota
+      and Shelly devices, so a dhcp matcher would match unrelated devices.
   discovery-update-info:
-    status: todo
+    status: exempt
     comment: |
-      Depends on discovery. A dhcp step that updates the host of an existing
-      entry would cover it.
+      There is no discovery. A changed host is updated with the reconfigure
+      flow, and the README recommends a DHCP reservation.
   docs-data-update: done
   docs-examples: done
   docs-known-limitations: done
