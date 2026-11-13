@@ -102,6 +102,7 @@ def test_config_errors_and_aborts_translated() -> None:
     errors = (
         _string_args(DEFINITIONS["parse_lights_json"], "InvalidLightsError")
         | _string_args(DEFINITIONS["_parse_light"], "InvalidLightsError")
+        | _string_args(DEFINITIONS["_light_subentry"], "InvalidLightsError")
         | _literals(DEFINITIONS["DomestiaConfigFlow"])
     )
     # _abort_if_unique_id_configured aborts with already_configured.
@@ -116,7 +117,9 @@ def test_config_errors_and_aborts_translated() -> None:
 
 def test_subentry_errors_and_aborts_translated() -> None:
     """Errors and aborts of the light subentry flow exist in the translations."""
-    errors = _string_args(DEFINITIONS["_light_from_input"], "InvalidLightsError")
+    errors = _string_args(
+        DEFINITIONS["_light_from_input"], "InvalidLightsError"
+    ) | _string_args(DEFINITIONS["_light_subentry"], "InvalidLightsError")
     aborts = _literals(DEFINITIONS["LightSubentryFlow"], keyword="reason")
 
     assert errors

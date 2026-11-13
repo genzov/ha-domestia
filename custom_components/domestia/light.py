@@ -22,6 +22,8 @@ from .entity import DomestiaEntity
 # The controller handles one request at a time.
 PARALLEL_UPDATES = 1
 
+type _Command = Callable[[], Awaitable[None]]
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -86,7 +88,7 @@ class DomestiaLight(DomestiaEntity, LightEntity):
         """Turn the light on, at the requested brightness if it is dimmable."""
         client = self.coordinator.client
         relay = self.light.relay
-        commands: list[Callable[[], Awaitable[None]]] = [partial(client.turn_on, relay)]
+        commands: list[_Command] = [partial(client.turn_on, relay)]
         if not self.light.dimmable:
             # A non-dimmable relay can be left dimmed; make sure it is fully on.
             commands.append(partial(client.set_max_brightness, relay))
@@ -105,9 +107,7 @@ class DomestiaLight(DomestiaEntity, LightEntity):
             [partial(self.coordinator.client.turn_off, self.light.relay)]
         )
 
-    async def _async_commands(
-        self, commands: list[Callable[[], Awaitable[None]]]
-    ) -> None:
+    async def _async_commands(self, commands: list[_Command]) -> None:
         """Send commands in order, then refresh the state.
 
         Every command is sent even if an earlier one failed: a brightness

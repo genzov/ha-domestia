@@ -79,7 +79,7 @@ LIGHT_SCHEMA = probatio.Schema(
 
 
 class InvalidLightsError(Exception):
-    """The lights JSON is invalid; translation_key names the form error."""
+    """A light is invalid; translation_key names the form error."""
 
     def __init__(self, translation_key: str) -> None:
         """Create the error for a form error key."""
@@ -87,18 +87,18 @@ class InvalidLightsError(Exception):
         self.translation_key = translation_key
 
 
-def _light_title(name: str, relay: int) -> str:
-    """Return a light's title; nameless always-on lights are named after the relay."""
-    return name.strip() or f"Relay {relay}"
-
-
 def _light_subentry(
     name: str, relay: int, *, dimmable: bool, always_on: bool
 ) -> ConfigSubentryData:
+    """Build a light subentry; raise InvalidLightsError if it needs a name."""
+    # Always-on lights get no entity, so they do not need a name; a nameless
+    # one is named after its relay.
+    if not always_on and not name.strip():
+        raise InvalidLightsError("name_required")
     return ConfigSubentryData(
         data={CONF_RELAY: relay, CONF_DIMMABLE: dimmable, CONF_ALWAYS_ON: always_on},
         subentry_type=SUBENTRY_TYPE_LIGHT,
-        title=_light_title(name, relay),
+        title=name.strip() or f"Relay {relay}",
         unique_id=str(relay),
     )
 
@@ -126,10 +126,6 @@ def _parse_light(light: Any) -> ConfigSubentryData:
         or not isinstance(always_on, bool)
     ):
         raise InvalidLightsError("invalid_lights_json")
-
-    # Always-on lights get no entity, so they do not need a name.
-    if not always_on and not name.strip():
-        raise InvalidLightsError("name_required")
 
     return _light_subentry(name, relay, dimmable=dimmable, always_on=always_on)
 
@@ -337,12 +333,11 @@ def _light_from_input(user_input: dict[str, Any]) -> ConfigSubentryData:
     # The selector bounds the relay but does not round it.
     if not float(relay).is_integer():
         raise InvalidLightsError("invalid_relay")
-    name: str = user_input.get(CONF_NAME, "")
-    always_on: bool = user_input[CONF_ALWAYS_ON]
-    if not always_on and not name.strip():
-        raise InvalidLightsError("name_required")
     return _light_subentry(
-        name, int(relay), dimmable=user_input[CONF_DIMMABLE], always_on=always_on
+        user_input.get(CONF_NAME, ""),
+        int(relay),
+        dimmable=user_input[CONF_DIMMABLE],
+        always_on=user_input[CONF_ALWAYS_ON],
     )
 
 
