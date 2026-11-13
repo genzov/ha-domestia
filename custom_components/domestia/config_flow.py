@@ -5,11 +5,13 @@ lights. Lights are config subentries, one per relay. Reconfigure steps update
 the entry or subentry and abort; the entry's update listener reloads it.
 """
 
+import textwrap
 from typing import Any, override
 
 import probatio
 from homeassistant.config_entries import (
     ConfigEntry,
+    ConfigEntryState,
     ConfigFlow,
     ConfigFlowResult,
     ConfigSubentryData,
@@ -132,16 +134,38 @@ def _parse_light(light: Any) -> ConfigSubentryData:
     return _light_subentry(name, relay, dimmable=dimmable, always_on=always_on)
 
 
+def _normalize_pasted_yaml(text: str) -> str:
+    """Repair the indentation of a YAML list copied from a nested block.
+
+    In the add-on's YAML view the lights list is indented under `lights:`.
+    Copying it keeps that indent, and a selection that starts at the first
+    `-` drops the indent of the first line only. Restore the first line's
+    indent from the line after it, then remove the common indent.
+    """
+    lines = [line for line in text.splitlines() if line.strip()]
+    if len(lines) > 1 and lines[0].startswith("- "):
+        second = lines[1]
+        indent = len(second) - len(second.lstrip())
+        if not second.lstrip().startswith("-"):
+            # A key of the first item, indented past its "- ".
+            indent -= 2
+        lines[0] = " " * max(indent, 0) + lines[0]
+    return textwrap.dedent("\n".join(lines))
+
+
 def parse_lights_json(text: str) -> list[ConfigSubentryData]:
     """Parse the add-on's lights list into light subentries.
 
     The add-on's Configuration tab shows the list as YAML. YAML is a superset of
-    JSON, so both that YAML and a JSON array are accepted.
+    JSON, so both that YAML and a JSON array are accepted, with or without the
+    enclosing `lights:` key.
     """
     try:
-        lights = parse_yaml(text)
+        lights = parse_yaml(_normalize_pasted_yaml(text))
     except HomeAssistantError as err:
         raise InvalidLightsError("invalid_lights_json") from err
+    if isinstance(lights, dict) and set(lights) == {CONF_LIGHTS}:
+        lights = lights[CONF_LIGHTS]
     if not isinstance(lights, list):
         raise InvalidLightsError("invalid_lights_json")
 
@@ -156,11 +180,11 @@ def parse_lights_json(text: str) -> list[ConfigSubentryData]:
     return subentries
 
 
-async def _can_connect(host: str) -> bool:
-    """Return whether the controller at host answers a get-state request."""
+async def _can_connect(client: DomestiaClient) -> bool:
+    """Return whether the client's controller answers a get-state request."""
     try:
         # Relay 1, not 0: a header-only reply is not a valid state.
-        await DomestiaClient(host).get_state(1)
+        await client.get_state(1)
     except DomestiaError:
         return False
     return True
@@ -201,7 +225,7 @@ class DomestiaConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             await self.async_set_unique_id(user_input[CONF_HOST])
             self._abort_if_unique_id_configured()
-            if await _can_connect(user_input[CONF_HOST]):
+            if await _can_connect(DomestiaClient(user_input[CONF_HOST])):
                 self._data = user_input
                 return await self.async_step_lights()
             errors["base"] = "cannot_connect"
@@ -218,9 +242,9 @@ class DomestiaConfigFlow(ConfigFlow, domain=DOMAIN):
         """Optionally import the lights array from the add-on configuration."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            text = user_input.get(CONF_LIGHTS, "").strip()
+            text = user_input.get(CONF_LIGHTS, "")
             try:
-                subentries = parse_lights_json(text) if text else []
+                subentries = parse_lights_json(text) if text.strip() else []
             except InvalidLightsError as err:
                 errors["base"] = err.translation_key
             else:
@@ -250,7 +274,15 @@ class DomestiaConfigFlow(ConfigFlow, domain=DOMAIN):
                 for other in self._async_current_entries()
             ):
                 return self.async_abort(reason="already_configured")
-            if await _can_connect(host):
+            # The controller handles one request at a time: probe a running
+            # entry's controller through its client, which serializes requests.
+            client = (
+                entry.runtime_data.client
+                if entry.state is ConfigEntryState.LOADED
+                and host == entry.data[CONF_HOST]
+                else DomestiaClient(host)
+            )
+            if await _can_connect(client):
                 self.hass.config_entries.async_update_entry(
                     entry, data=user_input, unique_id=host, title=host
                 )
@@ -317,13 +349,6 @@ def _light_from_input(user_input: dict[str, Any]) -> ConfigSubentryData:
 class LightSubentryFlow(ConfigSubentryFlow):
     """Add or change a light on one of the controller's relays."""
 
-    def _relay_in_use(self, subentry: ConfigSubentryData, own_id: str | None) -> bool:
-        """Return whether a light other than own_id already uses the relay."""
-        return any(
-            other.unique_id == subentry["unique_id"] and other.subentry_id != own_id
-            for other in self._get_entry().subentries.values()
-        )
-
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> SubentryFlowResult:
@@ -335,8 +360,9 @@ class LightSubentryFlow(ConfigSubentryFlow):
             except InvalidLightsError as err:
                 errors["base"] = err.translation_key
             else:
-                if self._relay_in_use(subentry, None):
-                    return self.async_abort(reason="already_configured")
+                # A relay that already has a light aborts with
+                # already_configured: Home Assistant refuses a duplicate
+                # subentry unique id.
                 return self.async_create_entry(
                     title=subentry["title"],
                     data=subentry["data"],
@@ -361,8 +387,9 @@ class LightSubentryFlow(ConfigSubentryFlow):
             except InvalidLightsError as err:
                 errors["base"] = err.translation_key
             else:
-                if self._relay_in_use(subentry, current.subentry_id):
-                    return self.async_abort(reason="already_configured")
+                # Moving to a relay that already has a light aborts with
+                # already_configured: Home Assistant refuses a duplicate
+                # subentry unique id.
                 self.hass.config_entries.async_update_subentry(
                     self._get_entry(),
                     current,

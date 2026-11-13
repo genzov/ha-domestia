@@ -252,6 +252,31 @@ async def test_lights_invalid_then_recover(
         ),
         ("[]", []),
         (
+            # Copied from the add-on's YAML view with its indent
+            "  - name: Garden\n    relay: 2\n  - name: Hall\n    relay: 3\n",
+            [light("Garden", 2), light("Hall", 3)],
+        ),
+        (
+            # Selected from the first "-", losing only the first line's indent
+            "- name: Garden\n    relay: 2\n  - name: Hall\n    relay: 3\n",
+            [light("Garden", 2), light("Hall", 3)],
+        ),
+        (
+            # One-line items selected from the first "-"
+            "- {name: Garden, relay: 2}\n  - {name: Hall, relay: 3}\n",
+            [light("Garden", 2), light("Hall", 3)],
+        ),
+        (
+            # A single item selected from its "-"
+            "- name: Garden\n    relay: 2\n",
+            [light("Garden", 2)],
+        ),
+        (
+            # Including the enclosing key
+            "lights:\n  - name: Garden\n    relay: 2\n",
+            [light("Garden", 2)],
+        ),
+        (
             # As copied from the add-on's Configuration tab in YAML mode
             (
                 "- name: Garden\n  relay: 2\n  dimmable: true\n"
@@ -271,6 +296,11 @@ async def test_lights_invalid_then_recover(
         "always-on without name",
         "max relay, dimmable",
         "empty",
+        "indented YAML",
+        "YAML selected from the first dash",
+        "one-line items selected from the first dash",
+        "single item selected from its dash",
+        "lights key",
         "add-on YAML",
     ],
 )
@@ -345,6 +375,24 @@ async def test_reconfigure(
     assert mock_config_entry.title == OTHER_HOST
     assert len(mock_config_entry.subentries) == 3
     mock_client.get_state.assert_awaited_once_with(1)
+
+
+async def test_reconfigure_loaded_entry_uses_its_client(
+    hass: HomeAssistant, init_integration: MockConfigEntry, mock_client: AsyncMock
+) -> None:
+    """A loaded entry's own client probes the controller, serializing requests."""
+    mock_client.reset_mock()
+    with patch("custom_components.domestia.config_flow.DomestiaClient") as new_client:
+        result = await init_integration.start_reconfigure_flow(hass)
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_HOST: HOST}
+        )
+        await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+    new_client.assert_not_called()
+    mock_client.get_state.assert_any_await(1)
 
 
 async def test_reconfigure_same_host(

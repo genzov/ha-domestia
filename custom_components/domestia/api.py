@@ -30,8 +30,9 @@ STATE_HEADER_LENGTH = 3
 # Length of the "OK" reply to a command.
 COMMAND_REPLY_LENGTH = 2
 
-# Large enough for any get-state reply (one byte per relay).
-MAX_REPLY_LENGTH = 256
+# Large enough for any get-state reply: the header plus one byte per relay, up
+# to relay 255, the highest a one-byte command can address.
+MAX_REPLY_LENGTH = STATE_HEADER_LENGTH + 255
 
 CMD_GET_STATE = 0x3C
 CMD_TURN_ON = 0x0E

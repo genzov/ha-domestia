@@ -28,7 +28,7 @@ from homeassistant.helpers.entity_platform import async_get_platforms
 from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.domestia.api import DomestiaConnectionError
-from custom_components.domestia.const import DOMAIN
+from custom_components.domestia.const import CONF_ALWAYS_ON, DOMAIN
 
 from .conftest import ENTRY_ID, GARDEN, HALL, HOST, WARDROBE, light_subentry
 
@@ -233,15 +233,16 @@ async def test_command_error(
     mock_client.get_state.assert_awaited_once()
 
 
-async def test_brightness_failure_stops_sequence(
+async def test_failed_turn_on_still_sets_brightness(
     hass: HomeAssistant, init_integration: MockConfigEntry, mock_client: AsyncMock
 ) -> None:
-    """A failed turn_on skips the brightness command."""
+    """A failed turn_on still sends the brightness, then raises its error."""
     del init_integration
     mock_client.reset_mock()
     mock_client.turn_on.side_effect = DomestiaConnectionError("refused")
+    mock_client.set_brightness.side_effect = DomestiaConnectionError("timeout")
 
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(HomeAssistantError) as exc_info:
         await hass.services.async_call(
             LIGHT_DOMAIN,
             SERVICE_TURN_ON,
@@ -249,5 +250,33 @@ async def test_brightness_failure_stops_sequence(
             blocking=True,
         )
 
-    mock_client.set_brightness.assert_not_called()
+    mock_client.set_brightness.assert_awaited_once_with(2, 64)
+    assert exc_info.value.translation_placeholders == {
+        "name": "Garden",
+        "error": "refused",
+    }
     mock_client.get_state.assert_awaited_once()
+
+
+async def test_switched_to_always_on_removes_entity_and_device(
+    hass: HomeAssistant,
+    init_integration: MockConfigEntry,
+    entity_registry: er.EntityRegistry,
+    device_registry: dr.DeviceRegistry,
+) -> None:
+    """A light changed to always-on loses its entity and device on reload."""
+    assert entity_registry.async_get_entity_id(LIGHT_DOMAIN, DOMAIN, HALL)
+    subentry = init_integration.subentries[HALL]
+
+    hass.config_entries.async_update_subentry(
+        init_integration,
+        subentry,
+        data={**subentry.data, CONF_ALWAYS_ON: True},
+    )
+    await hass.async_block_till_done()
+
+    assert entity_registry.async_get_entity_id(LIGHT_DOMAIN, DOMAIN, HALL) is None
+    assert hass.states.get(HALL_ID) is None
+    assert (
+        device_registry.async_get_device_by_identifier((DOMAIN, HALL), ENTRY_ID) is None
+    )

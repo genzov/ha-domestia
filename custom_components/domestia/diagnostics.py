@@ -27,7 +27,6 @@ async def async_get_config_entry_diagnostics(
         "coordinator": {
             "data": coordinator.data,
             "last_update_success": coordinator.last_update_success,
-            # Consecutive failed polls, once the coordinator tracks them.
-            "consecutive_failures": getattr(coordinator, "consecutive_failures", None),
+            "consecutive_failures": coordinator.consecutive_failures,
         },
     }
