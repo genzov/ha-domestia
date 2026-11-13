@@ -80,20 +80,45 @@ async def read_response(
     reader: asyncio.StreamReader,
     min_length: int,
     first_timeout: float = REQUEST_TIMEOUT,
-    continuation_timeout: float = CONTINUATION_TIMEOUT,  # noqa: ARG001
+    continuation_timeout: float = CONTINUATION_TIMEOUT,
 ) -> bytes:
     """Read a reply of at least min_length bytes.
 
-    Phase 0 skeleton: a single read. WP-A implements continuation reads.
+    A single read may return only part of a reply, so this keeps reading until
+    the reply is complete or the buffer is full. The first read waits up to
+    first_timeout; once bytes have arrived, each further read waits at most
+    continuation_timeout. If the controller goes quiet or closes the connection
+    after sending some bytes, those bytes are returned so the caller can judge
+    them; a reply shorter than expected, for example from a controller with
+    fewer relays than configured, then costs at most continuation_timeout.
     """
-    del min_length
-    try:
-        data = await asyncio.wait_for(reader.read(MAX_REPLY_LENGTH), first_timeout)
-    except TimeoutError as err:
-        raise DomestiaConnectionError("Timed out waiting for a reply") from err
-    if not data:
+    response = bytearray()
+    timeout = first_timeout
+
+    while len(response) < max(min_length, 1):
+        try:
+            chunk = await asyncio.wait_for(
+                reader.read(MAX_REPLY_LENGTH - len(response)), timeout
+            )
+        except TimeoutError as err:
+            if response:
+                break
+            raise DomestiaConnectionError("Timed out waiting for a reply") from err
+
+        if not chunk:  # EOF
+            break
+        response += chunk
+        if len(response) == MAX_REPLY_LENGTH:
+            break
+
+        # Whatever arrives next is the rest of an incomplete reply; don't wait
+        # the full request timeout for it.
+        timeout = continuation_timeout
+
+    if not response:
         raise DomestiaConnectionError("Read 0 bytes")
-    return data
+
+    return bytes(response)
 
 
 class DomestiaClient:
