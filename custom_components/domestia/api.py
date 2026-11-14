@@ -10,6 +10,9 @@ request is answered with ``0xff``, two status bytes and one byte per relay.
 
 import asyncio
 import contextlib
+import logging
+
+_LOGGER = logging.getLogger(__name__)
 
 CONTROLLER_PORT = 52001
 
@@ -17,9 +20,20 @@ CONTROLLER_PORT = 52001
 # 0-64; a relay turned fully on reads back as 64).
 MAX_BRIGHTNESS = 64
 
-# Bounds connecting and waiting for the first reply bytes. The controller
-# occasionally takes over a second to answer, so this is deliberately generous.
+# Bounds connecting to the controller and writing a request.
 REQUEST_TIMEOUT = 3.0
+
+# Bounds the wait for the first reply bytes. The controller answers within
+# about 50 ms, or not at all: twice a minute it accepts connections but ignores
+# requests for a few seconds. Waiting longer would not bring the reply.
+REPLY_TIMEOUT = 1.0
+
+# A request the controller ignored is sent again on a fresh connection, after a
+# pause, this many times. Together the attempts span about 5 s, enough to
+# outlast the controller's deaf window. Every request is safe to repeat: they
+# read state or set an absolute state.
+RETRIES = 2
+RETRY_DELAY = 1.0
 
 # Bounds the wait for the rest of a reply after its first bytes arrived.
 CONTINUATION_TIMEOUT = 0.25
@@ -52,6 +66,10 @@ class DomestiaProtocolError(DomestiaError):
     """The controller sent a reply that does not fit the request."""
 
 
+class _NoReplyError(DomestiaConnectionError):
+    """The controller accepted the request but sent nothing back."""
+
+
 def pack_command(cmd: bytes) -> bytes:
     """Pack a command into a frame: header, length, command, checksum."""
     return bytes((0xFF, 0x00, 0x00, len(cmd))) + cmd + bytes((sum(cmd) & 0xFF,))
@@ -80,7 +98,7 @@ def normalize_brightness(raw: int, *, dimmable: bool) -> int:
 async def read_response(
     reader: asyncio.StreamReader,
     min_length: int,
-    first_timeout: float = REQUEST_TIMEOUT,
+    first_timeout: float = REPLY_TIMEOUT,
     continuation_timeout: float = CONTINUATION_TIMEOUT,
 ) -> bytes:
     """Read a reply of at least min_length bytes.
@@ -104,7 +122,7 @@ async def read_response(
         except TimeoutError as err:
             if response:
                 break
-            raise DomestiaConnectionError("Timed out waiting for a reply") from err
+            raise _NoReplyError("Timed out waiting for a reply") from err
 
         if not chunk:  # EOF
             break
@@ -117,7 +135,7 @@ async def read_response(
         timeout = continuation_timeout
 
     if not response:
-        raise DomestiaConnectionError("Read 0 bytes")
+        raise _NoReplyError("Read 0 bytes")
 
     return bytes(response)
 
@@ -162,24 +180,45 @@ class DomestiaClient:
             raise DomestiaProtocolError(msg)
 
     async def _send(self, command: bytes, min_length: int) -> bytes:
-        async with self._lock:
-            try:
-                reader, writer = await asyncio.wait_for(
-                    asyncio.open_connection(self.host, self.port), REQUEST_TIMEOUT
-                )
-            except (OSError, TimeoutError) as err:
-                msg = f"Cannot connect to {self.host}:{self.port}: {err}"
-                raise DomestiaConnectionError(msg) from err
+        """Send a request and return its reply, retrying if none arrives.
 
-            try:
-                writer.write(pack_command(command))
-                # TimeoutError is an OSError, so a stuck write is mapped below.
-                await asyncio.wait_for(writer.drain(), REQUEST_TIMEOUT)
-                return await read_response(reader, min_length)
-            except OSError as err:
-                raise DomestiaConnectionError(str(err)) from err
-            finally:
-                writer.close()
-                # Throwaway per-request connection; a close error is not actionable.
-                with contextlib.suppress(OSError):
-                    await writer.wait_closed()
+        The lock is held across retries, so a retried request is not overtaken
+        by requests queued behind it.
+        """
+        async with self._lock:
+            for attempt in range(1, RETRIES + 1):
+                try:
+                    return await self._exchange(command, min_length)
+                except _NoReplyError as err:
+                    _LOGGER.debug(
+                        "No reply from %s (attempt %s of %s): %s",
+                        self.host,
+                        attempt,
+                        RETRIES + 1,
+                        err,
+                    )
+                await asyncio.sleep(RETRY_DELAY)
+            return await self._exchange(command, min_length)
+
+    async def _exchange(self, command: bytes, min_length: int) -> bytes:
+        """Send a request on a fresh connection and return the reply."""
+        try:
+            reader, writer = await asyncio.wait_for(
+                asyncio.open_connection(self.host, self.port), REQUEST_TIMEOUT
+            )
+        except (OSError, TimeoutError) as err:
+            msg = f"Cannot connect to {self.host}:{self.port}: {err}"
+            raise DomestiaConnectionError(msg) from err
+
+        try:
+            writer.write(pack_command(command))
+            # TimeoutError is an OSError, so a stuck write is mapped below.
+            await asyncio.wait_for(writer.drain(), REQUEST_TIMEOUT)
+            return await read_response(reader, min_length, REPLY_TIMEOUT)
+        except OSError as err:
+            raise DomestiaConnectionError(str(err)) from err
+        finally:
+            writer.close()
+            # Throwaway per-request connection; a close error is not actionable.
+            with contextlib.suppress(OSError):
+                await writer.wait_closed()

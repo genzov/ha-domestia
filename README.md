@@ -133,6 +133,10 @@ controller.
 - After a command from Home Assistant, the integration polls again right away,
   so the new state shows without waiting for the next poll. Further commands
   within 0.3 seconds share one extra poll after that.
+- Twice a minute the controller ignores requests for a few seconds. A poll or
+  command that gets no reply is sent again, up to 2 more times, 1 second
+  apart, so it goes through once the controller answers again. A poll that
+  still fails is logged as a warning.
 - A single failed poll does not make the lights unavailable. They keep their
   last known state, and only after **3 failed polls in a row** do they become
   unavailable. They recover on the next successful poll. This is logged once

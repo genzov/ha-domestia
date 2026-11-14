@@ -138,8 +138,9 @@ class DomestiaCoordinator(DataUpdateCoordinator[dict[int, int]]):
                 translation_key="cannot_connect",
                 translation_placeholders={"error": str(err)},
             ) from err
-        LOGGER.debug(
-            "Failed to fetch controller state (attempt %s): %s",
+        # The client already retried, so a failed poll is worth a warning.
+        LOGGER.warning(
+            "Failed to fetch controller state (%s in a row): %s",
             self._consecutive_failures,
             err,
         )

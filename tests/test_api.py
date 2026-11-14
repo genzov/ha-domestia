@@ -202,6 +202,10 @@ class FakeController:
 
     port: int
     reply: bytes = b"OK"
+    # Requests to leave unanswered before answering again, and how: by keeping
+    # the connection open in silence, or by closing it.
+    ignore: int = 0
+    ignore_by_closing: bool = False
     frames: list[bytes] = field(default_factory=list)
     open_connections: int = 0
     max_open_connections: int = 0
@@ -221,6 +225,14 @@ class FakeController:
         # replying: the client holds its lock until the reply arrives.
         await asyncio.sleep(0.02)
         self.open_connections -= 1
+        if self.ignore:
+            self.ignore -= 1
+            if not self.ignore_by_closing:
+                # Wait in silence until the client gives up and hangs up.
+                await reader.read()
+            writer.close()
+            await writer.wait_closed()
+            return
         writer.write(self.reply)
         await writer.drain()
         writer.close()
@@ -300,6 +312,8 @@ async def test_command_rejected(
     controller.reply = b"NO"
     with pytest.raises(DomestiaProtocolError):
         await client.turn_on(1)
+    # A reply, even a wrong one, is not retried.
+    assert len(controller.frames) == 1
 
 
 async def test_get_state_rejected(client: DomestiaClient) -> None:
@@ -336,3 +350,35 @@ async def test_connection_reset(client: DomestiaClient) -> None:
         pytest.raises(DomestiaConnectionError),
     ):
         await client.turn_on(1)
+
+
+@pytest.fixture
+def fast_retries(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Shorten the reply timeout and the pause between retries."""
+    monkeypatch.setattr(api, "REPLY_TIMEOUT", 0.05)
+    monkeypatch.setattr(api, "RETRY_DELAY", 0)
+
+
+@pytest.mark.usefixtures("fast_retries")
+@pytest.mark.parametrize("by_closing", [False, True], ids=["silent", "closed"])
+async def test_ignored_request_is_retried(
+    controller: FakeController, client: DomestiaClient, *, by_closing: bool
+) -> None:
+    """A request the controller ignores is sent again until it is answered."""
+    controller.ignore = api.RETRIES
+    controller.ignore_by_closing = by_closing
+    await client.turn_on(5)
+    assert controller.frames == [bytes((0xFF, 0, 0, 2, 0x0E, 5, 0x13))] * (
+        api.RETRIES + 1
+    )
+
+
+@pytest.mark.usefixtures("fast_retries")
+async def test_ignored_request_gives_up(
+    controller: FakeController, client: DomestiaClient
+) -> None:
+    """A controller that ignores every attempt is a connection error."""
+    controller.ignore = api.RETRIES + 1
+    with pytest.raises(DomestiaConnectionError, match="Timed out waiting"):
+        await client.get_state(3)
+    assert len(controller.frames) == api.RETRIES + 1

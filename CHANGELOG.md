@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.1.2
+
+- Lights no longer fail now and then with a "Timed out waiting for a reply"
+  error. Twice a minute the controller ignores requests for a few seconds;
+  Home Assistant now sends such a request again, so it goes through after a
+  short delay.
+- A poll that still fails after these retries is logged as a warning.
+
 ## 2.1.1
 
 - Turning on a non-dimmable light no longer shows a "Failed to control"
